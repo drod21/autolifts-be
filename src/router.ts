@@ -18,6 +18,7 @@ import {
 import { getPrograms } from './services/programService'
 import { getWorkoutById, getWorkouts } from './services/workoutService'
 import {
+  createWorkoutExercise,
   getWorkoutExercisesByWorkoutId,
   getWorkoutSummary,
 } from './services/workoutExerciseService'
@@ -266,44 +267,59 @@ app
       const { workoutId } = params
       const parsedWorkoutId = parseInt(workoutId)
 
-      const {
-        exercise_id,
-        sets,
-        reps_min,
-        reps_max,
-        rest_timer,
-        target_weight,
-      } = body as {
+      const workoutExercises = body as {
         exercise_id?: number
         sets?: number
         reps_min?: number
         reps_max?: number
         rest_timer?: number
         target_weight?: number
-      }
+      }[]
 
-      if (!exercise_id || !sets || !reps_max || !rest_timer) {
-        set.status = 400
-        return { error: 'Missing required fields' }
-      }
+      console.log(workoutExercises)
+      const savePromises: Promise<typeof workout_exercises.$inferInsert>[] =
+        workoutExercises
+          .map(
+            (
+              workoutExercise,
+            ): Promise<typeof workout_exercises.$inferInsert> | null => {
+              const {
+                exercise_id,
+                sets,
+                reps_min,
+                reps_max,
+                rest_timer,
+                target_weight,
+              } = workoutExercise
+              if (
+                !exercise_id ||
+                !sets ||
+                !parsedWorkoutId ||
+                !parsedWorkoutId ||
+                !rest_timer ||
+                !reps_max ||
+                !target_weight
+              ) {
+                return null
+              }
 
-      const newWorkoutExercise = await db
-        .insert(workout_exercises)
-        .values({
-          workout_id: parsedWorkoutId,
-          exercise_id,
-          sets,
-          reps_min: reps_min ?? null,
-          reps_max,
-          rest_timer,
-          target_weight: target_weight ?? 0,
-        })
-        .returning()
-        .execute()
+              return createWorkoutExercise(
+                workoutExercise as typeof workout_exercises.$inferInsert,
+              )
+            },
+          )
+          .filter(
+            (
+              workoutExercise,
+            ): workoutExercise is Promise<
+              typeof workout_exercises.$inferInsert
+            > => workoutExercise !== null,
+          )
 
-      return newWorkoutExercise[0]
+      const res = await Promise.all(savePromises)
+      return res
     } catch (error) {
-      console.error('Error creating workout exercise:', error)
+      console.error('Error creating workout exercises:', error)
       set.status = 500
       return { error: 'Internal Server Error' }
     }

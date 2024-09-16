@@ -8,15 +8,7 @@ import { muscle_groups } from '../models/muscleGroup'
 import { workouts } from '../models/workout'
 import { adjustWeightAPRE } from '../algorithm'
 
-interface CreateWorkoutExerciseInput {
-  workout_id: number
-  exercise_id: number
-  sets: number
-  reps_min?: number | null
-  reps_max: number
-  rest_timer: number
-  target_weight?: number
-}
+type CreateWorkoutExerciseInput = typeof workout_exercises.$inferInsert
 
 export const getWorkoutExercisesByWorkoutId = async (workout_id: number) => {
   return await db
@@ -99,7 +91,7 @@ JOIN ${workout_exercises} we ON s.workout_exercise_id = we.id
 JOIN ${exercises} e ON we.exercise_id = e.id
 JOIN ${muscle_groups} mg ON e.muscle_group_id = mg.id
 WHERE we.workout_id = ${workout_id}
-GROUP BY mg.name`)
+GROUP BY mg.name, e.name, s.weight, s.reps, s.rpe`)
 
   const totalRpe = res.reduce(
     (acc: any, row: any) => {
