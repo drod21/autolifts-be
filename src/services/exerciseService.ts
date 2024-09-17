@@ -2,29 +2,55 @@ import { db } from '../db'
 import { exercises } from '../models/exercise'
 import { cache } from '../cache'
 import { NotFoundError } from '../errors'
-import { desc, eq } from 'drizzle-orm'
+import { and, desc, eq } from 'drizzle-orm'
+import { match, P } from 'ts-pattern'
+import { Sql } from 'postgres'
 
-interface CreateExerciseInput {
-  name: string
+type CreateExerciseInput = Omit<
+  typeof exercises.$inferInsert,
+  'muscle_group_id' | 'movement_type_id'
+> & {
   muscle_group_name: string
   movement_type_name: string
 }
 
-export const getExercises = async () => {
+export const getExercises = async (
+  muscleGroupName?: string,
+  movementTypeName?: string,
+) => {
   const ex = await db
     .select()
     .from(exercises)
+    .where(
+      and(
+        movementTypeName && cache.getMovementTypeId(movementTypeName)
+          ? eq(
+              exercises.movement_type_id,
+              cache.getMovementTypeId(movementTypeName)!,
+            )
+          : undefined,
+        muscleGroupName && cache.getMuscleGroupId(muscleGroupName)
+          ? eq(
+              exercises.muscle_group_id,
+              cache.getMuscleGroupId(muscleGroupName)!,
+            )
+          : undefined,
+      ),
+    )
     .orderBy(desc(exercises.created_at))
-    .execute()
+
   const muscleGroups = await cache.getMuscleGroups()
   const movementTypes = await cache.getMovementTypes()
+
   return ex.map((e) => ({
     ...e,
-    muscle_group_name: muscleGroups.find((mg) => mg.id === e.muscle_group_id)
-      ?.name,
+    muscle_group_name:
+      muscleGroupName ??
+      muscleGroups.find((mg) => mg.id === e.muscle_group_id)?.name,
 
-    movement_type_name: movementTypes.find((mt) => mt.id === e.movement_type_id)
-      ?.name,
+    movement_type_name:
+      movementTypeName ??
+      movementTypes.find((mt) => mt.id === e.movement_type_id)?.name,
   }))
 }
 
@@ -51,7 +77,13 @@ export const getExerciseById = async (id: number) => {
 }
 
 export const createExercise = async (input: CreateExerciseInput) => {
-  const { name, muscle_group_name, movement_type_name } = input
+  const {
+    name,
+    muscle_group_name,
+    movement_type_name,
+    image_url,
+    description,
+  } = input
 
   const muscle_group_id = cache.getMuscleGroupId(muscle_group_name)
   if (!muscle_group_id) {
@@ -69,11 +101,7 @@ export const createExercise = async (input: CreateExerciseInput) => {
 
   const newExercise = await db
     .insert(exercises)
-    .values({
-      name,
-      muscle_group_id,
-      movement_type_id,
-    })
+    .values({ name, muscle_group_id, movement_type_id, image_url, description })
     .returning()
     .execute()
 

@@ -1,6 +1,6 @@
 // src/router.ts
 
-import { Elysia } from 'elysia'
+import { Elysia, t } from 'elysia'
 import { cors } from '@elysiajs/cors'
 import { db } from './db'
 import { exercises } from './models/exercise'
@@ -49,15 +49,29 @@ app
     const movementTypes = await getMovementTypes()
     return { muscleGroups, movementTypes }
   })
-  .get('/exercises', async () => {
-    try {
-      const allExercises = await getExercises()
-      return allExercises
-    } catch (error) {
-      console.error('Error fetching exercises:', error)
-      return { error: 'Internal Server Error' }
-    }
-  })
+  .get(
+    '/exercises',
+    async ({ query }) => {
+      try {
+        const allExercises = await getExercises(
+          query.muscleGroupName ?? undefined,
+          query.movementTypeName ?? undefined,
+        )
+        return allExercises
+      } catch (error) {
+        console.error('Error fetching exercises:', error)
+        return { error: 'Internal Server Error' }
+      }
+    },
+    {
+      query: t.Optional(
+        t.Object({
+          muscleGroupName: t.Optional(t.String()),
+          movementTypeName: t.Optional(t.String()),
+        }),
+      ),
+    },
+  )
   .get('/exercises/:exerciseId', async ({ params, set }) => {
     const { exerciseId } = params
     const parsedExerciseId = parseInt(exerciseId)

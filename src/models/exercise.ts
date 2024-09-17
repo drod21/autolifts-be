@@ -5,6 +5,8 @@ import { muscle_groups } from './muscleGroup'
 export const exercises = pgTable('exercises', {
   id: serial('id').primaryKey(),
   name: text('name').notNull(),
+	image_url: text('image_url').default(''),
+	description: text('description').default(''),
   muscle_group_id: integer('muscle_group_id')
     .notNull()
     .references(() => muscle_groups.id),
