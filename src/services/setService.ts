@@ -2,6 +2,7 @@ import { db } from '../db'
 import { sets } from '../models/set'
 import { NotFoundError } from '../errors'
 import { eq } from 'drizzle-orm'
+import { sql } from 'drizzle-orm/sql'
 
 export interface CreateSetInput {
   workout_exercise_id: number
@@ -39,6 +40,17 @@ export const createSet = async (input: CreateSetInput) => {
     completed = false,
   } = input
 
+  const config = {
+    target: [sets.id],
+    set: {
+      weight: sql`EXCLUDED.weight`,
+      reps: sql`EXCLUDED.reps`,
+      completed: sql`EXCLUDED.completed`,
+      rpe: sql`EXCLUDED.rpe`,
+      // Add other fields that should be updated in case of a conflict
+    },
+  }
+
   const newSet = await db
     .insert(sets)
     .values({
@@ -48,6 +60,7 @@ export const createSet = async (input: CreateSetInput) => {
       rpe: rpe?.toString() ?? null,
       completed: completed,
     })
+    .onConflictDoUpdate(config)
     .returning()
     .execute()
 

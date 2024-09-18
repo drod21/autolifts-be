@@ -14,7 +14,7 @@ import {
   getWorkoutExercisesByWorkoutId,
 } from './workoutExerciseService'
 
-interface CreateWorkoutInput {
+export interface CreateWorkoutInput {
   name: string
   date: string
   program_id?: number | null
@@ -54,24 +54,22 @@ export const createWorkout = async (input: CreateWorkoutInput) => {
 export const createWorkoutWithWorkoutExercisesAndSets = async (input: {
   workout: CreateWorkoutInput
   workoutExercises: CreateWorkoutExerciseInput[]
-  sets: CreateSetInput[]
+  sets: (CreateSetInput & { workout_exercise_index: number })[]
 }) => {
   const { workout, workoutExercises, sets } = input
 
   const newWorkout = await createWorkout(workout)
-
-  const newWorkoutExercises = await createWorkoutExercises(
-    workoutExercises.map((workoutExercise) => ({
-      ...workoutExercise,
-      workout_id: newWorkout.id,
-    })),
-  )
+  const we = workoutExercises.map((workoutExercise) => ({
+    ...workoutExercise,
+    workout_id: newWorkout.id,
+  }))
+  const newWorkoutExercises = await createWorkoutExercises(we)
 
   const newSets = await createSets(
     sets.map((set) => ({
       ...set,
       workout_id: newWorkout.id,
-      workout_exercise_id: newWorkoutExercises[0].id,
+      workout_exercise_id: newWorkoutExercises[set.workout_exercise_index].id,
     })),
   )
 
@@ -85,10 +83,8 @@ export const createWorkoutWithWorkoutExercisesAndSets = async (input: {
 export const fetchWorkoutWithWorkoutExercisesAndSets = async (id: number) => {
   const workout = await getWorkoutById(id)
   const workoutExercises = await getWorkoutExercisesByWorkoutId(id)
-  const sets = await getSetsByWorkoutExerciseId(id)
   return {
     workout,
     workoutExercises,
-    sets,
   }
 }

@@ -6,5 +6,7 @@ export const workouts = pgTable('workouts', {
   name: text('name').notNull(),
   date: timestamp('date').notNull(),
   program_id: integer('program_id').references(() => programs.id),
-  created_at: timestamp('created_at'),
+  created_at: timestamp('created_at').default(
+    new Date(new Date().toISOString()),
+  ),
 })

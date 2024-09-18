@@ -12,17 +12,44 @@ import { createSet } from './setService'
 export type CreateWorkoutExerciseInput = typeof workout_exercises.$inferInsert
 
 export const getWorkoutExercisesByWorkoutId = async (workout_id: number) => {
-  return await db
+  type GroupedWorkoutExercise = {
+    workoutExercise: typeof workout_exercises.$inferSelect
+    sets: (typeof sets.$inferSelect)[]
+    exercise: typeof exercises.$inferSelect
+  }
+  const result = await db
     .select({
       workout_exercise: workout_exercises,
       exercise: exercises,
-      sets: sets,
+      set: sets,
     })
     .from(workout_exercises)
     .leftJoin(exercises, eq(workout_exercises.exercise_id, exercises.id))
     .leftJoin(sets, eq(workout_exercises.id, sets.workout_exercise_id))
     .where(eq(workout_exercises.workout_id, workout_id))
     .execute()
+
+  // Group the results by workout_exercise
+  const groupedResult = result.reduce(
+    (acc, row) => {
+      const workoutExerciseId = row.workout_exercise.id.toString()
+      if (!acc[workoutExerciseId as keyof typeof acc]) {
+        acc[workoutExerciseId as keyof typeof acc] = {
+          workoutExercise: row.workout_exercise,
+          exercise: row.exercise as typeof exercises.$inferSelect,
+          sets: [],
+        }
+      }
+      if (row.set) {
+        acc[workoutExerciseId].sets.push(row.set)
+      }
+      return acc
+    },
+    {} as Record<string, GroupedWorkoutExercise>,
+  )
+
+  // Convert the grouped result to an array
+  return Object.values(groupedResult)
 }
 
 type CreateSetInput = typeof sets.$inferInsert
@@ -145,11 +172,13 @@ GROUP BY mg.name, e.name, s.weight, s.reps, s.rpe`)
     const weight = parseFloat(row.weight)
     const reps = parseFloat(row.reps)
     const rpe = parseFloat(row.rpe)
-    const adjustment = adjustWeightAPRE(6)({
-      rpe,
-      weight,
-      reps,
-    })
+    const adjustment =
+      weight -
+      adjustWeightAPRE(6)({
+        rpe,
+        weight,
+        reps,
+      })
 
     return {
       workout_exercise_id: row.workout_exercise_id,
