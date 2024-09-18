@@ -3,6 +3,16 @@ import { workouts } from '../models/workout'
 
 import { eq, desc } from 'drizzle-orm'
 import { NotFoundError } from '../errors'
+import {
+  CreateSetInput,
+  createSets,
+  getSetsByWorkoutExerciseId,
+} from './setService'
+import {
+  CreateWorkoutExerciseInput,
+  createWorkoutExercises,
+  getWorkoutExercisesByWorkoutId,
+} from './workoutExerciseService'
 
 interface CreateWorkoutInput {
   name: string
@@ -39,4 +49,46 @@ export const createWorkout = async (input: CreateWorkoutInput) => {
     .execute()
 
   return newWorkout[0]
+}
+
+export const createWorkoutWithWorkoutExercisesAndSets = async (input: {
+  workout: CreateWorkoutInput
+  workoutExercises: CreateWorkoutExerciseInput[]
+  sets: CreateSetInput[]
+}) => {
+  const { workout, workoutExercises, sets } = input
+
+  const newWorkout = await createWorkout(workout)
+
+  const newWorkoutExercises = await createWorkoutExercises(
+    workoutExercises.map((workoutExercise) => ({
+      ...workoutExercise,
+      workout_id: newWorkout.id,
+    })),
+  )
+
+  const newSets = await createSets(
+    sets.map((set) => ({
+      ...set,
+      workout_id: newWorkout.id,
+      workout_exercise_id: newWorkoutExercises[0].id,
+    })),
+  )
+
+  return {
+    workout: newWorkout,
+    workoutExercises: newWorkoutExercises,
+    sets: newSets,
+  }
+}
+
+export const fetchWorkoutWithWorkoutExercisesAndSets = async (id: number) => {
+  const workout = await getWorkoutById(id)
+  const workoutExercises = await getWorkoutExercisesByWorkoutId(id)
+  const sets = await getSetsByWorkoutExerciseId(id)
+  return {
+    workout,
+    workoutExercises,
+    sets,
+  }
 }

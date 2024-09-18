@@ -13,9 +13,9 @@ export const sets = pgTable('sets', {
   workout_exercise_id: integer('workout_exercise_id')
     .notNull()
     .references(() => workout_exercises.id),
-  weight: numeric('weight').notNull(),
+  weight: integer('weight').notNull(),
   reps: integer('reps').notNull(),
   rpe: numeric('rpe'),
   completed: boolean('completed').default(false),
-  created_at: timestamp('created_at').defaultNow(),
+  created_at: timestamp('created_at'),
 })

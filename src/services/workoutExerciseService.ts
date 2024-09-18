@@ -7,8 +7,9 @@ import { sets } from '../models/set'
 import { muscle_groups } from '../models/muscleGroup'
 import { workouts } from '../models/workout'
 import { adjustWeightAPRE } from '../algorithm'
+import { createSet } from './setService'
 
-type CreateWorkoutExerciseInput = typeof workout_exercises.$inferInsert
+export type CreateWorkoutExerciseInput = typeof workout_exercises.$inferInsert
 
 export const getWorkoutExercisesByWorkoutId = async (workout_id: number) => {
   return await db
@@ -24,13 +25,15 @@ export const getWorkoutExercisesByWorkoutId = async (workout_id: number) => {
     .execute()
 }
 
+type CreateSetInput = typeof sets.$inferInsert
+
 export const createWorkoutExercise = async (
   input: CreateWorkoutExerciseInput,
 ) => {
   const {
     workout_id,
     exercise_id,
-    sets,
+    sets: setsCount,
     reps_min = null,
     reps_max,
     rest_timer,
@@ -42,7 +45,7 @@ export const createWorkoutExercise = async (
     .values({
       workout_id,
       exercise_id,
-      sets,
+      sets: setsCount,
       reps_min,
       reps_max,
       rest_timer,
@@ -51,7 +54,33 @@ export const createWorkoutExercise = async (
     .returning()
     .execute()
 
+  const setPromises = []
+
+  for (let i = 0; i < setsCount; i++) {
+    setPromises.push(
+      createSet({
+        weight: target_weight ?? 0,
+        reps: reps_max ?? 0,
+        completed: false,
+        workout_exercise_id: newWorkoutExercise[0].id,
+      }),
+    )
+  }
+
+  await Promise.allSettled(setPromises)
+
   return newWorkoutExercise[0]
+}
+
+export const createWorkoutExercises = async (
+  input: CreateWorkoutExerciseInput[],
+) => {
+  const newWorkoutExercises = await db
+    .insert(workout_exercises)
+    .values(input)
+    .returning()
+    .execute()
+  return newWorkoutExercises
 }
 
 export const calculateWorkoutVolume = async (workout_id: number) => {

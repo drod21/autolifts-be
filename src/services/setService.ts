@@ -3,7 +3,7 @@ import { sets } from '../models/set'
 import { NotFoundError } from '../errors'
 import { eq } from 'drizzle-orm'
 
-interface CreateSetInput {
+export interface CreateSetInput {
   workout_exercise_id: number
   weight: number
   reps: number
@@ -19,6 +19,15 @@ export const getSetsByWorkoutExerciseId = async (
     .from(sets)
     .where(eq(sets.workout_exercise_id, workout_exercise_id))
     .execute()
+  // Start of Selection
+}
+
+export const createSets = async (input: CreateSetInput[]) => {
+  const transformedInput = input.map((set) => ({
+    ...set,
+    rpe: set.rpe !== undefined && set.rpe !== null ? set.rpe.toString() : null,
+  }))
+  return await db.insert(sets).values(transformedInput).returning().execute()
 }
 
 export const createSet = async (input: CreateSetInput) => {
@@ -34,10 +43,10 @@ export const createSet = async (input: CreateSetInput) => {
     .insert(sets)
     .values({
       workout_exercise_id,
-      weight: weight.toString(),
-      reps,
+      weight,
+      reps: reps,
       rpe: rpe?.toString() ?? null,
-      completed,
+      completed: completed,
     })
     .returning()
     .execute()

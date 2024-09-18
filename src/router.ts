@@ -16,13 +16,17 @@ import {
   getExercises,
 } from './services/exerciseService'
 import { getPrograms } from './services/programService'
-import { getWorkoutById, getWorkouts } from './services/workoutService'
+import {
+  fetchWorkoutWithWorkoutExercisesAndSets,
+  getWorkoutById,
+  getWorkouts,
+} from './services/workoutService'
 import {
   createWorkoutExercise,
   getWorkoutExercisesByWorkoutId,
   getWorkoutSummary,
 } from './services/workoutExerciseService'
-import { getSetsByWorkoutExerciseId } from './services/setService'
+import { createSet, getSetsByWorkoutExerciseId } from './services/setService'
 import { getMuscleGroups, getMovementTypes } from './services/extras'
 
 // Initialize the Elysia app
@@ -202,8 +206,10 @@ app
     try {
       const { workoutId: id } = params
       const workoutId = parseInt(id)
+      console.log(workoutId)
 
-      const workout = await getWorkoutById(workoutId)
+      const workout = await fetchWorkoutWithWorkoutExercisesAndSets(workoutId)
+      console.log(workout)
       return workout
     } catch (error) {
       if (error instanceof NotFoundError) {
@@ -379,19 +385,15 @@ app
           return { error: 'Missing required fields' }
         }
 
-        const newSet = await db
-          .insert(sets)
-          .values({
-            workout_exercise_id: parsedWorkoutExerciseId,
-            weight: weight.toString(),
-            reps,
-            rpe: rpe ? rpe.toString() : null,
-            completed: completed ?? false,
-          })
-          .returning()
-          .execute()
+        const newSet = await createSet({
+          weight,
+          reps,
+          rpe,
+          completed,
+          workout_exercise_id: parsedWorkoutExerciseId,
+        })
 
-        return newSet[0]
+        return newSet
       } catch (error) {
         console.error('Error creating set:', error)
         set.status = 500

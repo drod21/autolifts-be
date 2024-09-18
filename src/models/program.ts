@@ -12,5 +12,5 @@ export const programs = pgTable('programs', {
   name: text('name').notNull(),
   duration_weeks: integer('duration_weeks').notNull(),
   deload_week: boolean('deload_week').default(false),
-  created_at: timestamp('created_at').defaultNow(),
+  created_at: timestamp('created_at'),
 })

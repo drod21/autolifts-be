@@ -21,6 +21,6 @@ export const workout_exercises = pgTable('workout_exercises', {
   reps_min: integer('reps_min'),
   reps_max: integer('reps_max').notNull(),
   rest_timer: integer('rest_timer').notNull(),
-  target_weight: integer('target_weight').default(0),
-  created_at: timestamp('created_at').defaultNow(),
+  target_weight: integer('target_weight').notNull(),
+  created_at: timestamp('created_at'),
 })
