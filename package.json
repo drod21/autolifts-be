@@ -3,7 +3,9 @@
   "version": "1.0.50",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "bun run --watch src/index.ts"
+    "dev": "bun run --watch src/index.ts",
+    "generate-migration": "drizzle-kit generate",
+    "migrate": "bun run generate-migration && bun run ./src/migrate.ts"
   },
   "dependencies": {
     "@elysiajs/cookie": "^0.8.0",
@@ -13,13 +15,15 @@
     "@supabase/supabase-js": "^2.45.4",
     "drizzle-orm": "^0.33.0",
     "elysia": "^1.1.12",
+    "pg": "^8.13.0",
     "postgres": "^3.4.4",
     "prettier": "^3.3.3",
     "ts-pattern": "^5.3.1",
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "bun-types": "latest"
+    "bun-types": "latest",
+    "drizzle-kit": "^0.24.2"
   },
   "module": "src/index.js"
 }

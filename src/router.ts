@@ -36,7 +36,6 @@ import {
 import { getMuscleGroups, getMovementTypes } from './services/extras'
 import { authMiddleware } from './middleware/auth'
 import { jwtConfig } from './jwt.config'
-import { auth } from './modules/auth'
 import { supabase } from './libs/supabase'
 import swagger from '@elysiajs/swagger'
 
@@ -84,7 +83,6 @@ const router = (app: Elysia) =>
               access_token.value,
             )
 
-            console.log(data)
             try {
               const allExercises = await getExercises(
                 query.muscleGroupName ?? undefined,

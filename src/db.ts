@@ -18,12 +18,13 @@ import { movement_types } from './models/movementType'
 //   user: 'postgres.vmjkjofwsadfuoujiwal',
 //   password: '-rf#UkK.xVQ6Ej6',
 // })
-const sql = postgres({
+export const sql = postgres({
   database: 'postgres',
   port: 6543,
   host: 'aws-0-us-east-1.pooler.supabase.com',
   user: 'postgres.vmjkjofwsadfuoujiwal',
   password: 'u84THM7XO0tl8HEQ',
+  prepare: false,
 })
 // Initialize Drizzle ORM with the postgres client
 export const db = drizzle(sql, {
