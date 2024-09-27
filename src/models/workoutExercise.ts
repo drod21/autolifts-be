@@ -24,3 +24,6 @@ export const workout_exercises = pgTable('workout_exercises', {
   target_weight: integer('target_weight').notNull(),
   created_at: timestamp('created_at'),
 })
+
+export type WorkoutExercise = typeof workout_exercises.$inferSelect
+export type NewWorkoutExercise = typeof workout_exercises.$inferInsert

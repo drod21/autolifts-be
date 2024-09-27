@@ -4,3 +4,6 @@ export const movement_types = pgTable('movement_types', {
   id: serial('id').primaryKey(),
   name: text('name').notNull(),
 })
+
+export type MovementType = typeof movement_types.$inferSelect
+export type NewMovementType = typeof movement_types.$inferInsert

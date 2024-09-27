@@ -19,3 +19,6 @@ export const sets = pgTable('sets', {
   completed: boolean('completed').default(false),
   created_at: timestamp('created_at'),
 })
+
+export type Set = typeof sets.$inferSelect
+export type NewSet = typeof sets.$inferInsert

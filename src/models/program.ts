@@ -14,3 +14,6 @@ export const programs = pgTable('programs', {
   deload_week: boolean('deload_week').default(false),
   created_at: timestamp('created_at'),
 })
+
+export type Program = typeof programs.$inferSelect
+export type NewProgram = typeof programs.$inferInsert

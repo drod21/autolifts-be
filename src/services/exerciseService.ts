@@ -44,13 +44,10 @@ export const getExercises = async (
 
   return ex.map((e) => ({
     ...e,
-    muscle_group_name:
-      muscleGroupName ??
-      muscleGroups.find((mg) => mg.id === e.muscle_group_id)?.name,
-
-    movement_type_name:
-      movementTypeName ??
-      movementTypes.find((mt) => mt.id === e.movement_type_id)?.name,
+    muscle_group_name: muscleGroups.find((mg) => mg.id === e.muscle_group_id)
+      ?.name,
+    movement_type_name: movementTypes.find((mt) => mt.id === e.movement_type_id)
+      ?.name,
   }))
 }
 

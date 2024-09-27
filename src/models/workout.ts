@@ -10,3 +10,6 @@ export const workouts = pgTable('workouts', {
     new Date(new Date().toISOString()),
   ),
 })
+
+export type Workout = typeof workouts.$inferSelect
+export type NewWorkout = typeof workouts.$inferInsert
