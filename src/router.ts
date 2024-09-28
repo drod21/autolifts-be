@@ -44,6 +44,14 @@ const app = new Elysia()
 
     return plugin
   })
+  .get('/health-check', async () => {
+    return {
+      status: 'ok',
+      time: new Date().toISOString(),
+      message: 'AutoRegs is running',
+      uptime: process.uptime(),
+    }
+  })
 
 // Exercises Routes
 app

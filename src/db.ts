@@ -10,13 +10,21 @@ import { sets } from './models/set'
 import { muscle_groups } from './models/muscleGroup'
 import { movement_types } from './models/movementType'
 
+const dbUser = process.env.DB_USER!
+const dbPw = process.env.DB_PW!
+const dbHost = process.env.DB_HOST!
+const dbPort = process.env.DB_PORT!
+const dbName = process.env.DB_NAME!
+const dbUrl = process.env.DB_URL!
+
 // Initialize the postgres client
 const sql = postgres({
-  database: 'postgres',
-  port: 6543,
-  host: 'aws-0-us-east-1.pooler.supabase.com',
-  user: 'postgres.yysbfaaovamrkpysevjx',
-  password: '-rf#UkK.xVQ6Ej6',
+  database: dbName,
+  port: parseInt(dbPort, 10),
+  host: dbHost,
+  user: dbUser,
+  password: dbPw,
+  // prepare: false,
 })
 // Initialize Drizzle ORM with the postgres client
 export const db = drizzle(sql, {
