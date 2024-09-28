@@ -7,7 +7,7 @@ import { generateUuid } from './passwordManagement'
 import cookie from '@elysiajs/cookie'
 
 export const ACCESS_TOKEN_EXPIRY = 15 * 60
-export const REFRESH_TOKEN_EXPIRY = 14 * 24 * 60 * 60
+export const REFRESH_TOKEN_EXPIRY = 14 * 60 * 24
 const verifyRefreshToken = async (token: string) => {
   console.log('verifying...')
   const tokens = await db

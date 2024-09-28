@@ -25,9 +25,23 @@ export const authModule = (app: Elysia) =>
           refreshToken: refreshTokenCookie,
         },
       }) => {
-        const { email, password } = JSON.parse(body) as {
-          email: string
-          password: string
+        let email: string
+        let password: string
+        if (
+          typeof body !== 'string' &&
+          typeof body === 'object' &&
+          body != null &&
+          'email' in body &&
+          'password' in body
+        ) {
+          email = `${body?.email}`
+          password = `${body?.password}`
+        } else if (typeof body === 'string') {
+          const parsedBody = JSON.parse(body)
+          email = parsedBody.email
+          password = parsedBody.password
+        } else {
+          throw new Error('Invalid request body')
         }
 
         const user = await db
@@ -60,10 +74,8 @@ export const authModule = (app: Elysia) =>
         accessTokenCookie.value = accessToken
         accessTokenCookie.maxAge = ACCESS_TOKEN_EXPIRY
         const refreshToken = await signRefreshToken(newUser[0].id)
-        refreshTokenCookie.value = refreshToken[0].refresh_token
-        refreshTokenCookie.maxAge = new Date(
-          refreshToken[0].expires_at,
-        ).getTime()
+        refreshTokenCookie.value = refreshToken.refresh_token
+        refreshTokenCookie.maxAge = new Date(refreshToken.expires_at).getTime()
         refreshTokenCookie.path = '/'
 
         return { accessToken, refreshToken, user: newUser[0] }
@@ -80,9 +92,23 @@ export const authModule = (app: Elysia) =>
           refreshToken: refreshTokenCookie,
         },
       }) => {
-        const { email, password } = JSON.parse(body) as {
-          email: string
-          password: string
+        let email: string
+        let password: string
+        if (
+          typeof body !== 'string' &&
+          typeof body === 'object' &&
+          body != null &&
+          'email' in body &&
+          'password' in body
+        ) {
+          email = `${body?.email}`
+          password = `${body?.password}`
+        } else if (typeof body === 'string') {
+          const parsedBody = JSON.parse(body)
+          email = parsedBody.email
+          password = parsedBody.password
+        } else {
+          throw new Error('Invalid request body')
         }
 
         const user = await db
@@ -110,7 +136,7 @@ export const authModule = (app: Elysia) =>
         refreshTokenCookie.maxAge = REFRESH_TOKEN_EXPIRY
         refreshTokenCookie.path = '/'
 
-        return { accessToken, refreshToken: refreshToken[0].refresh_token }
+        return { accessToken, refreshToken: refreshToken.refresh_token }
       },
     )
     .post('/logout', async ({ cookie: { refreshToken } }) => {

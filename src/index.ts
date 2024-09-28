@@ -1,11 +1,9 @@
 import { Elysia } from 'elysia'
 import router from './router'
 import { authModule } from './modules/auth'
-import { jwtConfig } from './jwt.config'
 import { cors } from '@elysiajs/cors'
 import { swagger } from '@elysiajs/swagger'
 import { cache } from './cache'
-import { authen } from './libs/auth'
 
 const app = new Elysia()
   .use(cors()) // Add this line to enable CORS
@@ -16,23 +14,31 @@ const app = new Elysia()
     return plugin
   })
   .use(swagger())
-
+  .use((plugin) => {
+    plugin.onBeforeHandle((ctx) => {
+      console.log('------ request ------')
+      console.log(ctx.request.method)
+      console.log(ctx.request.url)
+      console.log(ctx.request.headers)
+      if (ctx.request.body) console.log(ctx.request.body.values())
+      console.log('------ request ------')
+    })
+    return plugin
+  })
   .use(authModule)
   .use(router)
   .use(async (plugin) => {
-    // plugin.onBeforeHandle((ctx) => {
-    //   console.log('------ request ------')
-    //   console.log(ctx.request.method)
-    //   console.log(ctx.request.url)
-    //   console.log(ctx.request.headers)
-    //   if (ctx.request.body) console.log(ctx.request.body.values())
-    //   console.log('------ request ------')
-    // })
+    plugin.onBeforeHandle((ctx) => {
+      console.log('------ request ------')
+      console.log(ctx.request.method)
+      console.log(ctx.request.url)
+      console.log(ctx.request.headers)
+      if (ctx.request.body) console.log(ctx.request.body.values())
+      console.log('------ request ------')
+    })
 
-    plugin.onAfterHandle((ctx) => {
-      console.log('------ response ------')
-      console.log(ctx.response)
-      console.log('------ response ------')
+    plugin.onError((error) => {
+      console.error('error', error)
     })
     return plugin
   })
