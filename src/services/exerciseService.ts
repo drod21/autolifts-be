@@ -17,6 +17,7 @@ type CreateExerciseInput = Omit<
 export const getExercises = async (
   muscleGroupName?: string,
   movementTypeName?: string,
+  userId?: string,
 ) => {
   const ex = await db
     .select()
@@ -35,6 +36,8 @@ export const getExercises = async (
               cache.getMuscleGroupId(muscleGroupName)!,
             )
           : undefined,
+        userId ? eq(exercises.user_id, userId) : undefined,
+        eq(exercises.is_system_exercise, userId ? false : true),
       ),
     )
     .orderBy(desc(exercises.created_at))

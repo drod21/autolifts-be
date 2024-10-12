@@ -14,27 +14,17 @@ const app = new Elysia()
     return plugin
   })
   .use(swagger())
-  .use((plugin) => {
-    plugin.onBeforeHandle((ctx) => {
-      console.log('------ request ------')
-      console.log(ctx.request.method)
-      console.log(ctx.request.url)
-      console.log(ctx.request.headers)
-      if (ctx.request.body) console.log(ctx.request.body.values())
-      console.log('------ request ------')
-    })
-    return plugin
-  })
+
   .use(authModule)
   .use(router)
   .use(async (plugin) => {
     plugin.onBeforeHandle((ctx) => {
-      console.log('------ request ------')
-      console.log(ctx.request.method)
-      console.log(ctx.request.url)
-      console.log(ctx.request.headers)
-      if (ctx.request.body) console.log(ctx.request.body.values())
-      console.log('------ request ------')
+      // console.log('------ request ------')
+      // console.log(ctx.request.method)
+      // console.log(ctx.request.url)
+      // console.log(ctx.request.headers)
+      // if (ctx.request.body) console.log(ctx.request.body.values())
+      // console.log('------ request ------')
     })
 
     plugin.onError((error) => {
@@ -42,8 +32,8 @@ const app = new Elysia()
     })
     return plugin
   })
-  .listen(3000, () => {
+  .listen(8080, () => {
     console.log('---------')
-    console.log('Server is running at http://localhost:3000')
+    console.log('Server is running at http://localhost:8080')
     console.log('---------')
   })

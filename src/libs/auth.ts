@@ -7,7 +7,7 @@ import { generateUuid } from './passwordManagement'
 import cookie from '@elysiajs/cookie'
 
 export const ACCESS_TOKEN_EXPIRY = 15 * 60
-export const REFRESH_TOKEN_EXPIRY = 14 * 60 * 24
+export const REFRESH_TOKEN_EXPIRY = 60 * 60 * 24 * 14
 const verifyRefreshToken = async (token: string) => {
   console.log('verifying...')
   const tokens = await db
@@ -28,7 +28,7 @@ const verifyRefreshToken = async (token: string) => {
 
 const signRefreshToken = async (userId: string) => {
   const token = generateUuid()
-  const expiresAt = new Date(Date.now() + REFRESH_TOKEN_EXPIRY) // 14 days from now
+  const expiresAt = new Date(Date.now() + REFRESH_TOKEN_EXPIRY * 1000) // 14 days from now
   const existingToken = await db
     .select()
     .from(userTokens)
@@ -43,7 +43,7 @@ const signRefreshToken = async (userId: string) => {
       .set({ refresh_token: token, expires_at: expiresAt })
       .where(eq(userTokens.id, existingToken[0].id))
       .returning()
-    console.log('res', res)
+    console.log('res', res, expiresAt)
     return res[0]
   } else {
     const result = await db
@@ -86,8 +86,17 @@ export const auth = (app: Elysia) =>
         }
         const verifyAccessToken = (token: string) => jwt.verify(token)
 
-        const refreshAccessToken = async () => {
-          const refreshTokenValue = refreshToken.value
+        const refreshAccessToken = async (
+          body: string | { refreshToken: string },
+        ) => {
+          let rt: string
+          if (typeof body === 'string') {
+            rt = (JSON.parse(body) as { refreshToken: string })
+              .refreshToken as string
+          } else {
+            rt = body.refreshToken
+          }
+          const refreshTokenValue = refreshToken.value ?? rt
           if (!refreshTokenValue) return null
 
           const user = await verifyRefreshToken(refreshTokenValue)
@@ -95,7 +104,7 @@ export const auth = (app: Elysia) =>
 
           const accessToken = await signAccessToken({ userId: user.id })
           accessTokenCookie.value = accessToken
-          return accessToken
+          return { accessToken, refreshToken: rt }
         }
         return {
           refreshAccessToken,

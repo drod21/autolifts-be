@@ -1,32 +1,37 @@
 import { db } from '../db'
-import { workout_exercises } from '../models/workoutExercise'
 import { eq, sql } from 'drizzle-orm'
 import { NotFoundError } from '../errors'
-import { exercises } from '../models/exercise'
-import { sets } from '../models/set'
 import { muscle_groups } from '../models/muscleGroup'
-import { workouts } from '../models/workout'
 import { adjustWeightAPRE } from '../algorithm'
-import { createSet } from './setService'
+import { createSet, createSets } from './setService'
+import {
+  sessionSets,
+  workouts,
+  workoutExercises,
+  exercises,
+  muscleGroups,
+  WorkoutExerciseInsert,
+} from '../drizzle/schema'
 
-export type CreateWorkoutExerciseInput = typeof workout_exercises.$inferInsert
-
-export const getWorkoutExercisesByWorkoutId = async (workout_id: number) => {
+export const getWorkoutExercisesByWorkoutId = async (workout_id: string) => {
   type GroupedWorkoutExercise = {
-    workoutExercise: typeof workout_exercises.$inferSelect
-    sets: (typeof sets.$inferSelect)[]
+    workoutExercise: typeof workoutExercises.$inferSelect
+    sessionSets: (typeof sessionSets.$inferSelect)[]
     exercise: typeof exercises.$inferSelect
   }
   const result = await db
     .select({
-      workout_exercise: workout_exercises,
+      workout_exercise: workoutExercises,
       exercise: exercises,
-      set: sets,
+      sessionSets: sessionSets,
     })
-    .from(workout_exercises)
-    .leftJoin(exercises, eq(workout_exercises.exercise_id, exercises.id))
-    .leftJoin(sets, eq(workout_exercises.id, sets.workout_exercise_id))
-    .where(eq(workout_exercises.workout_id, workout_id))
+    .from(workoutExercises)
+    .leftJoin(exercises, eq(workoutExercises.exerciseId, exercises.id))
+    .leftJoin(
+      sessionSets,
+      eq(workoutExercises.id, sessionSets.workoutExerciseId),
+    )
+    .where(eq(workoutExercises.workoutId, workout_id))
     .execute()
 
   // Group the results by workout_exercise
@@ -37,11 +42,11 @@ export const getWorkoutExercisesByWorkoutId = async (workout_id: number) => {
         acc[workoutExerciseId as keyof typeof acc] = {
           workoutExercise: row.workout_exercise,
           exercise: row.exercise as typeof exercises.$inferSelect,
-          sets: [],
+          sessionSets: [],
         }
       }
-      if (row.set) {
-        acc[workoutExerciseId].sets.push(row.set)
+      if (row.sessionSets) {
+        acc[workoutExerciseId].sessionSets.push(row.sessionSets)
       }
       return acc
     },
@@ -52,58 +57,35 @@ export const getWorkoutExercisesByWorkoutId = async (workout_id: number) => {
   return Object.values(groupedResult)
 }
 
-type CreateSetInput = typeof sets.$inferInsert
-
-export const createWorkoutExercise = async (
-  input: CreateWorkoutExerciseInput,
-) => {
-  const {
-    workout_id,
-    exercise_id,
-    sets: setsCount,
-    reps_min = null,
-    reps_max,
-    rest_timer,
-    target_weight = 0,
-  } = input
-
+export const createWorkoutExercise = async (input: WorkoutExerciseInsert) => {
   const newWorkoutExercise = await db
-    .insert(workout_exercises)
-    .values({
-      workout_id,
-      exercise_id,
-      sets: setsCount,
-      reps_min,
-      reps_max,
-      rest_timer,
-      target_weight,
-    })
+    .insert(workoutExercises)
+    .values(input)
     .returning()
     .execute()
 
-  const setPromises = []
+  const sets = []
 
-  for (let i = 0; i < setsCount; i++) {
-    setPromises.push(
-      createSet({
-        weight: target_weight ?? 0,
-        reps: reps_max ?? 0,
-        completed: false,
-        workout_exercise_id: newWorkoutExercise[0].id,
-      }),
-    )
+  for (let i = 0; i < input.sets; i++) {
+    sets.push({
+      weight: input?.weight ?? '0',
+      plannedReps: input?.repMax ?? 0,
+      isComplete: false,
+      setNumber: i + 1,
+      workoutExerciseId: newWorkoutExercise[0].id,
+    })
   }
 
-  await Promise.allSettled(setPromises)
+  await createSets(sets)
 
   return newWorkoutExercise[0]
 }
 
 export const createWorkoutExercises = async (
-  input: CreateWorkoutExerciseInput[],
+  input: WorkoutExerciseInsert[],
 ) => {
   const newWorkoutExercises = await db
-    .insert(workout_exercises)
+    .insert(workoutExercises)
     .values(input)
     .returning()
     .execute()
@@ -114,8 +96,8 @@ export const calculateWorkoutVolume = async (workout_id: number) => {
   const res = await db.execute(sql`SELECT
 	mg.name AS muscle_group,
 	SUM(s.weight * s.reps) AS volume
-FROM ${sets} s
-JOIN ${workout_exercises} we ON s.workout_exercise_id = we.id
+FROM ${sessionSets} s
+JOIN ${workoutExercises} we ON s.workout_exercise_id = we.id
 JOIN ${exercises} e ON we.exercise_id = e.id
 JOIN ${muscle_groups} mg ON e.muscle_group_id = mg.id
 WHERE we.workout_id = ${workout_id}
@@ -139,15 +121,15 @@ export const getAutoregulationAdjustments = async (workout_id: number) => {
 	e.name AS exercise,
 	COUNT(s.id) AS sets,
 	s.weight AS weight,
-	s.reps AS reps,
+	s.plannedReps AS reps,
 	s.rpe AS rpe,
-	SUM(s.weight * s.reps) AS volume
-FROM ${sets} s
-JOIN ${workout_exercises} we ON s.workout_exercise_id = we.id
+	SUM(s.weight * s.plannedReps) AS volume
+FROM ${sessionSets} s
+JOIN ${workoutExercises} we ON s.workout_exercise_id = we.id
 JOIN ${exercises} e ON we.exercise_id = e.id
 JOIN ${muscle_groups} mg ON e.muscle_group_id = mg.id
 WHERE we.workout_id = ${workout_id}
-GROUP BY mg.name, e.name, s.weight, s.reps, s.rpe`)
+GROUP BY mg.name, e.name, s.weight, s.plannedReps, s.rpe`)
 
   const totalRpe = res.reduce(
     (acc: any, row: any) => {

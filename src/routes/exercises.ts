@@ -1,18 +1,21 @@
 import { Elysia } from 'elysia'
 import { db } from '../lib/db'
-import { exercises } from '../models/exercise'
+import { exercises } from '../drizzle/schema'
+import { auth } from '../libs/auth'
+import { getExercises } from '../services/exerciseService'
 
 export const exercisesRouter = new Elysia({ prefix: '/exercises' })
+  .use(auth)
   .get(
     '/',
-    async ({ query, cookie: { access_token } }) => {
-      const { data, error } = await supabase.auth.getUser(access_token.value)
+    async ({ query, cookie: { accessToken }, verifyAccessToken }) => {
+      const user = await verifyAccessToken(accessToken.value ?? '')
 
-      console.log(data)
       try {
         const allExercises = await getExercises(
           query.muscleGroupName ?? undefined,
           query.movementTypeName ?? undefined,
+          user?.id,
         )
         return allExercises
       } catch (error) {

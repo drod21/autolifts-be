@@ -3,6 +3,7 @@ import { sets } from '../models/set'
 import { NotFoundError } from '../errors'
 import { eq } from 'drizzle-orm'
 import { sql } from 'drizzle-orm/sql'
+import { SessionSetInsert, sessionSets } from '../drizzle/schema'
 
 export interface CreateSetInput {
   workout_exercise_id: number
@@ -23,21 +24,18 @@ export const getSetsByWorkoutExerciseId = async (
   // Start of Selection
 }
 
-export const createSets = async (input: CreateSetInput[]) => {
-  const transformedInput = input.map((set) => ({
-    ...set,
-    rpe: set.rpe !== undefined && set.rpe !== null ? set.rpe.toString() : null,
-  }))
-  return await db.insert(sets).values(transformedInput).returning().execute()
+export const createSets = async (input: SessionSetInsert[]) => {
+  return await db.insert(sessionSets).values(input).returning().execute()
 }
 
-export const createSet = async (input: CreateSetInput) => {
+export const createSet = async (input: SessionSetInsert) => {
   const {
-    workout_exercise_id,
+    workoutExerciseId,
     weight,
-    reps,
+    plannedReps,
     rpe = null,
-    completed = false,
+    isComplete = false,
+    setNumber = 1,
   } = input
 
   const config = {
@@ -52,13 +50,14 @@ export const createSet = async (input: CreateSetInput) => {
   }
 
   const newSet = await db
-    .insert(sets)
+    .insert(sessionSets)
     .values({
-      workout_exercise_id,
+      workoutExerciseId,
       weight,
-      reps: reps,
-      rpe: rpe?.toString() ?? null,
-      completed: completed,
+      plannedReps,
+      rpe: rpe ?? null,
+      setNumber,
+      isComplete,
     })
     .onConflictDoUpdate(config)
     .returning()

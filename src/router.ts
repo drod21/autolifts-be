@@ -2,11 +2,13 @@
 
 import { Context, Elysia, error, t } from 'elysia'
 import { db } from './db'
-import { exercises } from './models/exercise'
-import { programs } from './models/program'
-import { workouts } from './models/workout'
-import { workout_exercises } from './models/workoutExercise'
-import { sets } from './models/set'
+import {
+  WorkoutExerciseInsert,
+  exercises,
+  programs,
+  ProgramInsert,
+  SessionSetInsert,
+} from './drizzle/schema'
 import { NotFoundError } from './errors'
 import { cache } from './cache'
 import {
@@ -18,24 +20,17 @@ import { getPrograms } from './services/programService'
 import {
   CreateWorkoutInput,
   createWorkoutWithWorkoutExercisesAndSets,
+  fetchWorkoutsWithDetails,
   fetchWorkoutWithWorkoutExercisesAndSets,
-  getWorkoutById,
   getWorkouts,
 } from './services/workoutService'
 import {
   createWorkoutExercise,
-  CreateWorkoutExerciseInput,
   getWorkoutExercisesByWorkoutId,
   getWorkoutSummary,
 } from './services/workoutExerciseService'
-import {
-  createSet,
-  CreateSetInput,
-  getSetsByWorkoutExerciseId,
-} from './services/setService'
+import { createSet, getSetsByWorkoutExerciseId } from './services/setService'
 import { getMuscleGroups, getMovementTypes } from './services/extras'
-import { authMiddleware } from './middleware/auth'
-import { jwtConfig } from './jwt.config'
 import { supabase } from './libs/supabase'
 import swagger from '@elysiajs/swagger'
 
@@ -141,8 +136,8 @@ const router = (app: Elysia) =>
               .insert(exercises)
               .values({
                 name,
-                muscle_group_id,
-                movement_type_id,
+                muscleGroupId: muscle_group_id,
+                movementTypeId: movement_type_id,
               })
               .returning()
               .execute()
@@ -189,13 +184,10 @@ const router = (app: Elysia) =>
     })
     .post('/programs', async ({ body, set }) => {
       try {
-        const { name, duration_weeks, deload_week } = body as {
-          name?: string
-          duration_weeks?: number
-          deload_week?: boolean
-        }
+        const { name, startDate, endDate, hasDeloadWeek, userId } =
+          body as ProgramInsert
 
-        if (!name || !duration_weeks) {
+        if (!name || !startDate || !endDate || !userId) {
           set.status = 400
           return { error: 'Missing required fields' }
         }
@@ -204,8 +196,10 @@ const router = (app: Elysia) =>
           .insert(programs)
           .values({
             name,
-            duration_weeks,
-            deload_week: deload_week ?? false,
+            startDate,
+            endDate,
+            hasDeloadWeek: hasDeloadWeek ?? false,
+            userId,
           })
           .returning()
           .execute()
@@ -228,10 +222,13 @@ const router = (app: Elysia) =>
         return { error: 'Internal Server Error' }
       }
     })
+    .get('/workouts/details', async () => {
+      const workoutsWithExercises = await fetchWorkoutsWithDetails()
+      return workoutsWithExercises
+    })
     .get('/workouts/:workoutId', async ({ params, set }) => {
       try {
-        const { workoutId: id } = params
-        const workoutId = parseInt(id)
+        const { workoutId } = params
 
         const workout = await fetchWorkoutWithWorkoutExercisesAndSets(workoutId)
         return workout
@@ -249,8 +246,8 @@ const router = (app: Elysia) =>
       try {
         const { workout, workoutExercises, sets } = body as {
           workout: CreateWorkoutInput
-          workoutExercises: CreateWorkoutExerciseInput[]
-          sets: (CreateSetInput & { workout_exercise_index: number })[]
+          workoutExercises: WorkoutExerciseInsert[]
+          sets: (SessionSetInsert & { workout_exercise_index: number })[]
         }
 
         const newWorkout = await createWorkoutWithWorkoutExercisesAndSets({
@@ -284,10 +281,8 @@ const router = (app: Elysia) =>
     .get('/workouts/:workoutId/exercises', async ({ params, set }) => {
       try {
         const { workoutId } = params
-        const parsedWorkoutId = parseInt(workoutId)
 
-        const workoutExercises =
-          await getWorkoutExercisesByWorkoutId(parsedWorkoutId)
+        const workoutExercises = await getWorkoutExercisesByWorkoutId(workoutId)
 
         return workoutExercises
       } catch (error) {
@@ -311,44 +306,37 @@ const router = (app: Elysia) =>
         }[]
 
         console.log(workoutExercises)
-        const savePromises: Promise<typeof workout_exercises.$inferInsert>[] =
-          workoutExercises
-            .map(
-              (
-                workoutExercise,
-              ): Promise<typeof workout_exercises.$inferInsert> | null => {
-                const {
-                  exercise_id,
-                  sets,
-                  reps_min,
-                  reps_max,
-                  rest_timer,
-                  target_weight,
-                } = workoutExercise
-                if (
-                  !exercise_id ||
-                  !sets ||
-                  !parsedWorkoutId ||
-                  !parsedWorkoutId ||
-                  !rest_timer ||
-                  !reps_max ||
-                  !target_weight
-                ) {
-                  return null
-                }
+        const savePromises: Promise<WorkoutExerciseInsert>[] = workoutExercises
+          .map((workoutExercise): Promise<WorkoutExerciseInsert> | null => {
+            const {
+              exercise_id,
+              sets,
+              reps_min,
+              reps_max,
+              rest_timer,
+              target_weight,
+            } = workoutExercise
+            if (
+              !exercise_id ||
+              !sets ||
+              !parsedWorkoutId ||
+              !parsedWorkoutId ||
+              !reps_max ||
+              !target_weight
+            ) {
+              return null
+            }
 
-                return createWorkoutExercise(
-                  workoutExercise as typeof workout_exercises.$inferInsert,
-                )
-              },
+            return createWorkoutExercise(
+              workoutExercise as WorkoutExerciseInsert,
             )
-            .filter(
-              (
-                workoutExercise,
-              ): workoutExercise is Promise<
-                typeof workout_exercises.$inferInsert
-              > => workoutExercise !== null,
-            )
+          })
+          .filter(
+            (
+              workoutExercise,
+            ): workoutExercise is Promise<WorkoutExerciseInsert> =>
+              workoutExercise !== null,
+          )
 
         const res = await Promise.all(savePromises)
         return res
@@ -384,7 +372,6 @@ const router = (app: Elysia) =>
       async ({ params, body, set }) => {
         try {
           const { workoutExerciseId } = params
-          const parsedWorkoutExerciseId = parseInt(workoutExerciseId)
 
           const { weight, reps, rpe, completed } = body as {
             weight?: number
@@ -399,11 +386,12 @@ const router = (app: Elysia) =>
           }
 
           const newSet = await createSet({
-            weight,
-            reps,
-            rpe,
-            completed,
-            workout_exercise_id: parsedWorkoutExerciseId,
+            weight: weight.toString(),
+            plannedReps: reps,
+            rpe: rpe ?? null,
+            isComplete: completed ?? false,
+            workoutExerciseId,
+            setNumber: 1,
           })
 
           return newSet

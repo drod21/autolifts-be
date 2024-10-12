@@ -8,7 +8,6 @@ import {
   hashPassword,
   verifyPassword,
 } from '../libs/passwordManagement'
-import cookie from '@elysiajs/cookie'
 
 export const authModule = (app: Elysia) =>
   app
@@ -69,7 +68,6 @@ export const authModule = (app: Elysia) =>
             throw error
           })
 
-        console.log('aaaa', newUser)
         const accessToken = await signAccessToken({ userId: newUser[0].id })
         accessTokenCookie.value = accessToken
         accessTokenCookie.maxAge = ACCESS_TOKEN_EXPIRY
@@ -104,7 +102,10 @@ export const authModule = (app: Elysia) =>
           email = `${body?.email}`
           password = `${body?.password}`
         } else if (typeof body === 'string') {
-          const parsedBody = JSON.parse(body)
+          const parsedBody = JSON.parse(body) as {
+            email: string
+            password: string
+          }
           email = parsedBody.email
           password = parsedBody.password
         } else {
@@ -136,7 +137,11 @@ export const authModule = (app: Elysia) =>
         refreshTokenCookie.maxAge = REFRESH_TOKEN_EXPIRY
         refreshTokenCookie.path = '/'
 
-        return { accessToken, refreshToken: refreshToken.refresh_token }
+        return {
+          accessToken,
+          refreshToken: refreshToken.refresh_token,
+          user: { name: user[0].name, email: user[0].email },
+        }
       },
     )
     .post('/logout', async ({ cookie: { refreshToken } }) => {
@@ -146,10 +151,31 @@ export const authModule = (app: Elysia) =>
 
       return { success: true }
     })
-    .post('/refresh', async ({ refreshAccessToken }) => {
-      const newAccessToken = await refreshAccessToken()
-      if (!newAccessToken) {
-        return { error: 'Invalid refresh token' }
-      }
-      return { accessToken: newAccessToken }
-    })
+    .post(
+      '/refresh',
+      async ({
+        body,
+        cookie: { refreshToken, accessToken },
+        refreshAccessToken,
+      }) => {
+        const newTokens = await refreshAccessToken(
+          body as { refreshToken: string } | string,
+        )
+        if (!newTokens) {
+          return { error: 'Invalid refresh token' }
+        }
+
+        accessToken.value = newTokens.accessToken
+        accessToken.path = '/'
+        accessToken.expires = new Date(
+          new Date().getTime() + ACCESS_TOKEN_EXPIRY * 1000,
+        )
+        refreshToken.value = newTokens.refreshToken
+        refreshToken.path = '/'
+        refreshToken.expires = new Date(
+          new Date().getTime() + REFRESH_TOKEN_EXPIRY * 1000,
+        )
+
+        return newTokens
+      },
+    )
