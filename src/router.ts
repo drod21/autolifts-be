@@ -18,6 +18,7 @@ import {
 } from './services/exerciseService'
 import { getPrograms } from './services/programService'
 import {
+  createWorkout,
   CreateWorkoutInput,
   createWorkoutWithWorkoutExercisesAndSets,
   fetchWorkoutsWithDetails,
@@ -184,10 +185,10 @@ const router = (app: Elysia) =>
     })
     .post('/programs', async ({ body, set }) => {
       try {
-        const { name, startDate, endDate, hasDeloadWeek, userId } =
+        const { name, startDate, endDate, hasDeloadWeek, user_id } =
           body as ProgramInsert
 
-        if (!name || !startDate || !endDate || !userId) {
+        if (!name || !startDate || !endDate || !user_id) {
           set.status = 400
           return { error: 'Missing required fields' }
         }
@@ -199,7 +200,7 @@ const router = (app: Elysia) =>
             startDate,
             endDate,
             hasDeloadWeek: hasDeloadWeek ?? false,
-            userId,
+            user_id,
           })
           .returning()
           .execute()
@@ -215,7 +216,7 @@ const router = (app: Elysia) =>
     // Workouts Routes
     .get('/workouts', async () => {
       try {
-        const allWorkouts = await getWorkouts()
+        const allWorkouts = await getWorkouts(true)
         return allWorkouts
       } catch (error) {
         console.error('Error fetching workouts:', error)
@@ -250,12 +251,16 @@ const router = (app: Elysia) =>
           sets: (SessionSetInsert & { workout_exercise_index: number })[]
         }
 
-        const newWorkout = await createWorkoutWithWorkoutExercisesAndSets({
-          workoutExercises,
-          workout,
-          sets,
-        })
+        if (workoutExercises.length && sets.length) {
+          const newWorkout = await createWorkoutWithWorkoutExercisesAndSets({
+            workoutExercises,
+            workout,
+            sets,
+          })
 
+          return newWorkout
+        }
+        const newWorkout = createWorkout(workout)
         return newWorkout
       } catch (error) {
         console.error('Error creating workout:', error)
@@ -387,11 +392,11 @@ const router = (app: Elysia) =>
 
           const newSet = await createSet({
             weight: weight.toString(),
-            plannedReps: reps,
+            planned_reps: reps,
             rpe: rpe ?? null,
             isComplete: completed ?? false,
-            workoutExerciseId,
-            setNumber: 1,
+            workout_exercise_id: workoutExerciseId,
+            set_number: 1,
           })
 
           return newSet

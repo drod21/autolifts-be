@@ -21,15 +21,15 @@ export const userTokens = pgTable(
   'user_tokens',
   {
     id: uuid('id').primaryKey().notNull(),
-    userId: uuid('user_id'),
+    user_id: uuid('user_id'),
     refreshToken: text('refresh_token').notNull(),
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow(),
     expiresAt: timestamp('expires_at', { mode: 'string' }).notNull(),
   },
   (table) => {
     return {
-      userTokensUserIdFkey: foreignKey({
-        columns: [table.userId],
+      userTokensuser_idFkey: foreignKey({
+        columns: [table.user_id],
         foreignColumns: [users.id],
         name: 'user_tokens_user_id_fkey',
       })
@@ -102,7 +102,7 @@ export const workouts = pgTable(
       .default(sql`uuid_generate_v4()`)
       .primaryKey()
       .notNull(),
-    userId: uuid('user_id'),
+    user_id: uuid('user_id'),
     name: varchar('name', { length: 255 }).notNull(),
     description: text('description'),
     createdAt: timestamp('created_at', {
@@ -116,12 +116,12 @@ export const workouts = pgTable(
   },
   (table) => {
     return {
-      idxWorkoutsUserId: index('idx_workouts_user_id').using(
+      idxWorkoutsuser_id: index('idx_workouts_user_id').using(
         'btree',
-        table.userId.asc().nullsLast(),
+        table.user_id.asc().nullsLast(),
       ),
-      workoutsUserIdFkey: foreignKey({
-        columns: [table.userId],
+      workoutsuser_idFkey: foreignKey({
+        columns: [table.user_id],
         foreignColumns: [users.id],
         name: 'workouts_user_id_fkey',
       }).onDelete('cascade'),
@@ -136,7 +136,7 @@ export const exercises = pgTable(
       .default(sql`uuid_generate_v4()`)
       .primaryKey()
       .notNull(),
-    userId: uuid('user_id'),
+    user_id: uuid('user_id'),
     name: varchar('name', { length: 255 }).notNull(),
     description: text('description'),
     muscleGroupId: integer('muscle_group_id'),
@@ -158,9 +158,9 @@ export const exercises = pgTable(
         'btree',
         table.muscleGroupId.asc().nullsLast(),
       ),
-      idxExercisesUserId: index('idx_exercises_user_id').using(
+      idxExercisesuser_id: index('idx_exercises_user_id').using(
         'btree',
-        table.userId.asc().nullsLast(),
+        table.user_id.asc().nullsLast(),
       ),
       exercisesMovementTypeIdFkey: foreignKey({
         columns: [table.movementTypeId],
@@ -172,8 +172,8 @@ export const exercises = pgTable(
         foreignColumns: [muscleGroups.id],
         name: 'exercises_muscle_group_id_fkey',
       }),
-      exercisesUserIdFkey: foreignKey({
-        columns: [table.userId],
+      exercisesuser_idFkey: foreignKey({
+        columns: [table.user_id],
         foreignColumns: [users.id],
         name: 'exercises_user_id_fkey',
       }).onDelete('set null'),
@@ -188,13 +188,13 @@ export const workoutExercises = pgTable(
       .default(sql`uuid_generate_v4()`)
       .primaryKey()
       .notNull(),
-    workoutId: uuid('workout_id'),
-    exerciseId: uuid('exercise_id'),
+    workout_id: uuid('workout_id'),
+    exercise_id: uuid('exercise_id'),
     sets: integer('sets').notNull(),
-    restTimer: integer('rest_timer'),
-    repMin: integer('rep_min'),
-    repMax: integer('rep_max'),
-    totalReps: integer('total_reps'),
+    rest_timer: integer('rest_timer'),
+    rep_min: integer('rep_min'),
+    rep_max: integer('rep_max'),
+    total_reps: integer('total_reps'),
     weight: numeric('weight', { precision: 10, scale: 2 }).default('0'),
     createdAt: timestamp('created_at', {
       withTimezone: true,
@@ -209,17 +209,17 @@ export const workoutExercises = pgTable(
     return {
       idxWorkoutExercisesExerciseId: index(
         'idx_workout_exercises_exercise_id',
-      ).using('btree', table.exerciseId.asc().nullsLast()),
+      ).using('btree', table.exercise_id.asc().nullsLast()),
       idxWorkoutExercisesWorkoutId: index(
         'idx_workout_exercises_workout_id',
-      ).using('btree', table.workoutId.asc().nullsLast()),
+      ).using('btree', table.workout_id.asc().nullsLast()),
       workoutExercisesExerciseIdFkey: foreignKey({
-        columns: [table.exerciseId],
+        columns: [table.exercise_id],
         foreignColumns: [exercises.id],
         name: 'workout_exercises_exercise_id_fkey',
       }).onDelete('cascade'),
       workoutExercisesWorkoutIdFkey: foreignKey({
-        columns: [table.workoutId],
+        columns: [table.workout_id],
         foreignColumns: [workouts.id],
         name: 'workout_exercises_workout_id_fkey',
       }).onDelete('cascade'),
@@ -234,7 +234,7 @@ export const programs = pgTable(
       .default(sql`uuid_generate_v4()`)
       .primaryKey()
       .notNull(),
-    userId: uuid('user_id'),
+    user_id: uuid('user_id'),
     name: varchar('name', { length: 255 }).notNull(),
     startDate: date('start_date').notNull(),
     endDate: date('end_date').notNull(),
@@ -250,12 +250,12 @@ export const programs = pgTable(
   },
   (table) => {
     return {
-      idxProgramsUserId: index('idx_programs_user_id').using(
+      idxProgramsuser_id: index('idx_programs_user_id').using(
         'btree',
-        table.userId.asc().nullsLast(),
+        table.user_id.asc().nullsLast(),
       ),
-      programsUserIdFkey: foreignKey({
-        columns: [table.userId],
+      programsuser_idFkey: foreignKey({
+        columns: [table.user_id],
         foreignColumns: [users.id],
         name: 'programs_user_id_fkey',
       }).onDelete('cascade'),
@@ -271,7 +271,7 @@ export const programWorkouts = pgTable(
       .primaryKey()
       .notNull(),
     programId: uuid('program_id'),
-    workoutId: uuid('workout_id'),
+    workout_id: uuid('workout_id'),
     weekNumber: integer('week_number').notNull(),
     day: integer('day'),
     scheduledDate: date('scheduled_date'),
@@ -295,14 +295,14 @@ export const programWorkouts = pgTable(
       ).using('btree', table.scheduledDate.asc().nullsLast()),
       idxProgramWorkoutsWorkoutId: index(
         'idx_program_workouts_workout_id',
-      ).using('btree', table.workoutId.asc().nullsLast()),
+      ).using('btree', table.workout_id.asc().nullsLast()),
       programWorkoutsProgramIdFkey: foreignKey({
         columns: [table.programId],
         foreignColumns: [programs.id],
         name: 'program_workouts_program_id_fkey',
       }).onDelete('cascade'),
       programWorkoutsWorkoutIdFkey: foreignKey({
-        columns: [table.workoutId],
+        columns: [table.workout_id],
         foreignColumns: [workouts.id],
         name: 'program_workouts_workout_id_fkey',
       }).onDelete('cascade'),
@@ -317,15 +317,15 @@ export const workoutSessions = pgTable(
       .default(sql`uuid_generate_v4()`)
       .primaryKey()
       .notNull(),
-    userId: uuid('user_id'),
-    workoutId: uuid('workout_id'),
+    user_id: uuid('user_id'),
+    workout_id: uuid('workout_id'),
     programId: uuid('program_id'),
-    scheduledDate: date('scheduled_date'),
-    actualStart: timestamp('actual_start', {
+    scheduled_date: date('scheduled_date'),
+    actual_start: timestamp('actual_start', {
       withTimezone: true,
       mode: 'string',
     }).defaultNow(),
-    actualEnd: timestamp('actual_end', { withTimezone: true, mode: 'string' }),
+    actual_end: timestamp('actual_end', { withTimezone: true, mode: 'string' }),
     duration: interval('duration').generatedAlwaysAs(
       sql`(actual_end - actual_start)`,
     ),
@@ -343,25 +343,25 @@ export const workoutSessions = pgTable(
       idxWorkoutSessionsProgramId: index(
         'idx_workout_sessions_program_id',
       ).using('btree', table.programId.asc().nullsLast()),
-      idxWorkoutSessionsUserId: index('idx_workout_sessions_user_id').using(
+      idxWorkoutSessionsuser_id: index('idx_workout_sessions_user_id').using(
         'btree',
-        table.userId.asc().nullsLast(),
+        table.user_id.asc().nullsLast(),
       ),
       idxWorkoutSessionsWorkoutId: index(
         'idx_workout_sessions_workout_id',
-      ).using('btree', table.workoutId.asc().nullsLast()),
+      ).using('btree', table.workout_id.asc().nullsLast()),
       workoutSessionsProgramIdFkey: foreignKey({
         columns: [table.programId],
         foreignColumns: [programs.id],
         name: 'workout_sessions_program_id_fkey',
       }).onDelete('set null'),
-      workoutSessionsUserIdFkey: foreignKey({
-        columns: [table.userId],
+      workoutSessionsuser_idFkey: foreignKey({
+        columns: [table.user_id],
         foreignColumns: [users.id],
         name: 'workout_sessions_user_id_fkey',
       }).onDelete('cascade'),
       workoutSessionsWorkoutIdFkey: foreignKey({
-        columns: [table.workoutId],
+        columns: [table.workout_id],
         foreignColumns: [workouts.id],
         name: 'workout_sessions_workout_id_fkey',
       }).onDelete('set null'),
@@ -376,12 +376,12 @@ export const sessionSets = pgTable(
       .default(sql`uuid_generate_v4()`)
       .primaryKey()
       .notNull(),
-    sessionId: uuid('session_id'),
-    workoutExerciseId: uuid('workout_exercise_id'),
-    exerciseId: uuid('exercise_id'),
-    setNumber: integer('set_number').notNull(),
-    plannedReps: integer('planned_reps'),
-    actualReps: integer('actual_reps'),
+    session_id: uuid('session_id'),
+    workout_exercise_id: uuid('workout_exercise_id'),
+    exercise_id: uuid('exercise_id'),
+    set_number: integer('set_number').notNull(),
+    planned_reps: integer('planned_reps'),
+    actual_reps: integer('actual_reps'),
     weight: numeric('weight', { precision: 10, scale: 2 }),
     rpe: integer('rpe'),
     isComplete: boolean('is_complete').default(false),
@@ -398,24 +398,24 @@ export const sessionSets = pgTable(
     return {
       idxSessionSetsExerciseId: index('idx_session_sets_exercise_id').using(
         'btree',
-        table.exerciseId.asc().nullsLast(),
+        table.exercise_id.asc().nullsLast(),
       ),
       idxSessionSetsSessionId: index('idx_session_sets_session_id').using(
         'btree',
-        table.sessionId.asc().nullsLast(),
+        table.session_id.asc().nullsLast(),
       ),
       sessionSetsExerciseIdFkey: foreignKey({
-        columns: [table.exerciseId],
+        columns: [table.exercise_id],
         foreignColumns: [exercises.id],
         name: 'session_sets_exercise_id_fkey',
       }).onDelete('set null'),
       sessionSetsSessionIdFkey: foreignKey({
-        columns: [table.sessionId],
+        columns: [table.session_id],
         foreignColumns: [workoutSessions.id],
         name: 'session_sets_session_id_fkey',
       }).onDelete('cascade'),
       sessionSetsWorkoutExerciseIdFkey: foreignKey({
-        columns: [table.workoutExerciseId],
+        columns: [table.workout_exercise_id],
         foreignColumns: [workoutExercises.id],
         name: 'session_sets_workout_exercise_id_fkey',
       }).onDelete('set null'),
@@ -430,7 +430,7 @@ export const autoRegulationSettings = pgTable(
       .default(sql`uuid_generate_v4()`)
       .primaryKey()
       .notNull(),
-    userId: uuid('user_id'),
+    user_id: uuid('user_id'),
     parameters: jsonb('parameters'),
     createdAt: timestamp('created_at', {
       withTimezone: true,
@@ -443,17 +443,17 @@ export const autoRegulationSettings = pgTable(
   },
   (table) => {
     return {
-      idxAutoRegulationSettingsUserId: index(
+      idxAutoRegulationSettingsuser_id: index(
         'idx_auto_regulation_settings_user_id',
-      ).using('btree', table.userId.asc().nullsLast()),
-      autoRegulationSettingsUserIdFkey: foreignKey({
-        columns: [table.userId],
+      ).using('btree', table.user_id.asc().nullsLast()),
+      autoRegulationSettingsuser_idFkey: foreignKey({
+        columns: [table.user_id],
         foreignColumns: [users.id],
         name: 'auto_regulation_settings_user_id_fkey',
       }).onDelete('cascade'),
-      autoRegulationSettingsUserIdKey: unique(
+      autoRegulationSettingsuser_idKey: unique(
         'auto_regulation_settings_user_id_key',
-      ).on(table.userId),
+      ).on(table.user_id),
     }
   },
 )

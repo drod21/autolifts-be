@@ -151,6 +151,13 @@ export const authModule = (app: Elysia) =>
 
       return { success: true }
     })
+    .get('/me', async ({ cookie: { refreshToken }, verifyRefreshToken }) => {
+      if (!refreshToken.value) {
+        return { error: 'No refresh token' }
+      }
+      const user = await verifyRefreshToken(refreshToken.value)
+      return { user }
+    })
     .post(
       '/refresh',
       async ({

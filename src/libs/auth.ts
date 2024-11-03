@@ -11,7 +11,10 @@ export const REFRESH_TOKEN_EXPIRY = 60 * 60 * 24 * 14
 const verifyRefreshToken = async (token: string) => {
   console.log('verifying...')
   const tokens = await db
-    .select()
+    .select({
+      user_tokens: userTokens,
+      users: { id: users.id, name: users.name, email: users.email },
+    })
     .from(userTokens)
     .where(eq(userTokens.refresh_token, token))
     .leftJoin(users, eq(userTokens.user_id, users.id))

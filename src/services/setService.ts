@@ -30,12 +30,13 @@ export const createSets = async (input: SessionSetInsert[]) => {
 
 export const createSet = async (input: SessionSetInsert) => {
   const {
-    workoutExerciseId,
+    workout_exercise_id,
     weight,
-    plannedReps,
+    planned_reps,
     rpe = null,
     isComplete = false,
-    setNumber = 1,
+    exercise_id,
+    set_number = 1,
   } = input
 
   const config = {
@@ -52,11 +53,12 @@ export const createSet = async (input: SessionSetInsert) => {
   const newSet = await db
     .insert(sessionSets)
     .values({
-      workoutExerciseId,
+      workout_exercise_id,
+      exercise_id,
       weight,
-      plannedReps,
+      planned_reps,
       rpe: rpe ?? null,
-      setNumber,
+      set_number,
       isComplete,
     })
     .onConflictDoUpdate(config)

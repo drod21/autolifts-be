@@ -11,7 +11,7 @@ import {
   Exercise,
   WorkoutExercise,
 } from '../drizzle/schema'
-import { eq, desc } from 'drizzle-orm'
+import { eq, desc, count } from 'drizzle-orm'
 import { NotFoundError } from '../errors'
 import { createSets } from './setService'
 import {
@@ -37,10 +37,18 @@ export type WorkoutExerciseWithDetails = WorkoutExercise & {
   sessionSets: SessionSet[]
 }
 
-export const getWorkouts = async () => {
+export const getWorkouts = async (includeExerciseCount = false) => {
   return await db
-    .select()
+    .select({
+      name: workouts.name,
+      id: workouts.id,
+      description: workouts.description,
+      exerciseCount: count(workoutExercises.id),
+    })
+
     .from(workouts)
+    .leftJoin(workoutExercises, eq(workouts.id, workoutExercises.workout_id))
+    .groupBy(workouts.id)
     .orderBy(desc(workouts.createdAt))
     .execute()
 }
@@ -50,6 +58,7 @@ export const getWorkoutById = async (id: string) => {
     .from(workouts)
     .where(eq(workouts.id, id))
     .execute()
+  console.log('workout', workout)
   if (workout.length === 0) {
     throw new NotFoundError('Workout not found')
   }
@@ -57,14 +66,14 @@ export const getWorkoutById = async (id: string) => {
 }
 
 export const createWorkout = async (input: WorkoutInsert) => {
-  const { name, description, userId = null } = input
+  const { name, description, user_id = null } = input
 
   const newWorkout = await db
     .insert(workouts)
     .values({
       name,
       description,
-      userId,
+      user_id,
     })
     .returning()
     .execute()
@@ -80,19 +89,22 @@ export const createWorkoutWithWorkoutExercisesAndSets = async (input: {
   const { workout, workoutExercises, sets } = input
 
   const newWorkout = await createWorkout(workout)
+
+  if (!newWorkout) {
+    throw new Error('Failed to create workout')
+  }
   const we = workoutExercises.map((workoutExercise) => ({
     ...workoutExercise,
     workout_id: newWorkout.id,
   }))
   const newWorkoutExercises = await createWorkoutExercises(we)
-
-  const newSets = await createSets(
-    sets.map((set, idx) => ({
-      ...set,
-      setNumber: idx + 1,
-      workoutExerciseId: newWorkoutExercises[set.workout_exercise_index].id,
-    })),
-  )
+  console.log('aaa', newWorkoutExercises)
+  const mapped = sets.map(({ id, ...set }) => ({
+    ...set,
+    workout_exercise_id: newWorkoutExercises[set.workout_exercise_index].id,
+  }))
+  console.log('bbb', mapped)
+  const newSets = await createSets(mapped)
 
   return {
     workout: newWorkout,
@@ -136,19 +148,19 @@ export const fetchWorkoutsWithDetails = async (): Promise<
       },
       workoutExercise: {
         id: workoutExercises.id,
-        workoutId: workoutExercises.workoutId,
-        exerciseId: workoutExercises.exerciseId,
+        workout_id: workoutExercises.workout_id,
+        exercise_id: workoutExercises.exercise_id,
         setsCount: workoutExercises.sets, // Renamed field
-        repMin: workoutExercises.repMin,
-        repMax: workoutExercises.repMax,
-        targetWeight: workoutExercises.weight,
-        createdAt: workoutExercises.createdAt,
+        rep_min: workoutExercises.rep_min,
+        rep_max: workoutExercises.rep_max,
+        target_weight: workoutExercises.weight,
+        created_at: workoutExercises.createdAt,
       },
       sessionSet: {
         id: sessionSets.id,
-        workout_exercise_id: sessionSets.workoutExerciseId,
+        workout_exercise_id: sessionSets.workout_exercise_id,
         weight: sessionSets.weight,
-        reps: sessionSets.actualReps,
+        reps: sessionSets.actual_reps,
         rpe: sessionSets.rpe,
         completed: sessionSets.isComplete,
         created_at: sessionSets.createdAt,
@@ -162,15 +174,16 @@ export const fetchWorkoutsWithDetails = async (): Promise<
         movementTypeId: exercises.movementTypeId,
         createdAt: exercises.createdAt,
         isSystemExercise: exercises.isSystemExercise,
-        userId: exercises.userId,
+        user_id: exercises.user_id,
+        updatedAt: exercises.updatedAt,
       },
     })
     .from(workoutExercises)
-    .leftJoin(workouts, eq(workoutExercises.workoutId, workouts.id))
-    .leftJoin(exercises, eq(workoutExercises.exerciseId, exercises.id))
+    .leftJoin(workouts, eq(workoutExercises.workout_id, workouts.id))
+    .leftJoin(exercises, eq(workoutExercises.exercise_id, exercises.id))
     .leftJoin(
       sessionSets,
-      eq(workoutExercises.id, sessionSets.workoutExerciseId),
+      eq(workoutExercises.id, sessionSets.workout_exercise_id),
     )
     .execute()
 
@@ -190,24 +203,24 @@ export const fetchWorkoutsWithDetails = async (): Promise<
           ? [
               {
                 id: r.sessionSet.id,
-                exerciseId: r.workoutExercise.exerciseId,
+                exercise_id: r.workoutExercise.exercise_id,
                 weight: r.sessionSet.weight,
                 createdAt: r.sessionSet.created_at,
                 updatedAt: r.sessionSet.created_at, // Assuming updatedAt is the same as createdAt for now
-                sessionId: r.workout?.id ?? null,
-                workoutExerciseId: r.sessionSet.workout_exercise_id,
-                setNumber: 1, // Assuming this is the first set
-                plannedReps: r.workoutExercise.repMax, // Using repMax as plannedReps
-                actualReps: r.sessionSet.reps,
+                session_id: r.workout?.id ?? null,
+                workout_exercise_id: r.sessionSet.workout_exercise_id,
+                set_number: 1, // Assuming this is the first set
+                planned_reps: r.workoutExercise.rep_max, // Using repMax as plannedReps
+                actual_reps: r.sessionSet.reps,
                 rpe: r.sessionSet.rpe,
                 isComplete: r.sessionSet.completed,
               },
             ]
           : [],
-        exercise: r.exercise ?? null,
+        exerwcise: r.exercise,
       })
     }
   }
 
-  return workoutWithDetails
+  return workoutWithDetails as unknown as WorkoutWithDetails[]
 }

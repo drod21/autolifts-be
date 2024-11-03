@@ -26,12 +26,12 @@ export const getWorkoutExercisesByWorkoutId = async (workout_id: string) => {
       sessionSets: sessionSets,
     })
     .from(workoutExercises)
-    .leftJoin(exercises, eq(workoutExercises.exerciseId, exercises.id))
+    .leftJoin(exercises, eq(workoutExercises.exercise_id, exercises.id))
     .leftJoin(
       sessionSets,
-      eq(workoutExercises.id, sessionSets.workoutExerciseId),
+      eq(workoutExercises.id, sessionSets.workout_exercise_id),
     )
-    .where(eq(workoutExercises.workoutId, workout_id))
+    .where(eq(workoutExercises.workout_id, workout_id))
     .execute()
 
   // Group the results by workout_exercise
@@ -53,6 +53,7 @@ export const getWorkoutExercisesByWorkoutId = async (workout_id: string) => {
     {} as Record<string, GroupedWorkoutExercise>,
   )
 
+  console.log('groupedResult', Object.values(groupedResult))
   // Convert the grouped result to an array
   return Object.values(groupedResult)
 }
@@ -69,10 +70,10 @@ export const createWorkoutExercise = async (input: WorkoutExerciseInsert) => {
   for (let i = 0; i < input.sets; i++) {
     sets.push({
       weight: input?.weight ?? '0',
-      plannedReps: input?.repMax ?? 0,
+      planned_reps: input?.rep_max ?? 0,
       isComplete: false,
-      setNumber: i + 1,
-      workoutExerciseId: newWorkoutExercise[0].id,
+      set_number: i + 1,
+      workout_exercise_id: newWorkoutExercise[0].id,
     })
   }
 

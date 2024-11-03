@@ -13,18 +13,23 @@ const app = new Elysia()
 
     return plugin
   })
-  .use(swagger())
+  // .use(swagger())
 
   .use(authModule)
   .use(router)
   .use(async (plugin) => {
     plugin.onBeforeHandle((ctx) => {
-      // console.log('------ request ------')
+      console.log('------ request ------')
       // console.log(ctx.request.method)
-      // console.log(ctx.request.url)
+      console.log(ctx.request.url)
       // console.log(ctx.request.headers)
       // if (ctx.request.body) console.log(ctx.request.body.values())
-      // console.log('------ request ------')
+      console.log('------ request ------')
+    })
+    plugin.onAfterResponse((ctx) => {
+      console.log('------ response ------')
+      console.log(ctx.response)
+      console.log('------ response ------')
     })
 
     plugin.onError((error) => {
@@ -32,8 +37,11 @@ const app = new Elysia()
     })
     return plugin
   })
-  .listen(8080, () => {
-    console.log('---------')
-    console.log('Server is running at http://localhost:8080')
-    console.log('---------')
-  })
+
+app.listen(3000, () => {
+  console.log('---------')
+  console.log(
+    `Server is running at ${app.server?.hostname}:${app.server?.port}`,
+  )
+  console.log('---------')
+})
