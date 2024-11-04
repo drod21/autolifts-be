@@ -1,15 +1,18 @@
 import { Elysia } from 'elysia'
-import { db } from '../lib/db'
+import { db } from '../db'
 import { exercises } from '../drizzle/schema'
 import { auth } from '../libs/auth'
-import { getExercises } from '../services/exerciseService'
+import { getExerciseById, getExercises } from '../services/exerciseService'
 
 export const exercisesRouter = new Elysia({ prefix: '/exercises' })
   .use(auth)
   .get(
     '/',
     async ({ query, cookie: { accessToken }, verifyAccessToken }) => {
-      const user = await verifyAccessToken(accessToken.value ?? '')
+      if (!accessToken.value) {
+        return { error: 'No access token' }
+      }
+      const user = await verifyAccessToken(accessToken.value)
 
       try {
         const allExercises = await getExercises(
