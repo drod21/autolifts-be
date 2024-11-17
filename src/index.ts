@@ -53,17 +53,18 @@ const app = new Elysia()
   .use(router)
   .use(async (plugin) => {
     plugin.onBeforeHandle((ctx) => {
-      console.log('------ request ------')
+      console.time('------ request ------')
       // console.log(ctx.request.method)
       console.log(ctx.request.url)
+      console.log(ctx.headers)
       // console.log(ctx.request.headers)
       // if (ctx.request.body) console.log(ctx.request.body.values())
       console.log('------ request ------')
     })
     plugin.onAfterResponse((ctx) => {
       console.log('------ response ------')
-      console.log(ctx.response)
-      console.log('------ response ------')
+      // console.log(ctx.response)
+      console.timeEnd('------ response ------')
     })
 
     plugin.onError((error) => {

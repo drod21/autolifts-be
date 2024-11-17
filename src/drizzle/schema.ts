@@ -22,9 +22,9 @@ export const userTokens = pgTable(
   {
     id: uuid('id').primaryKey().notNull(),
     user_id: uuid('user_id'),
-    refreshToken: text('refresh_token').notNull(),
-    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow(),
-    expiresAt: timestamp('expires_at', { mode: 'string' }).notNull(),
+    refresh_token: text('refresh_token').notNull(),
+    created_at: timestamp('created_at', { mode: 'string' }).defaultNow(),
+    expires_at: timestamp('expires_at', { mode: 'string' }).notNull(),
   },
   (table) => {
     return {
@@ -236,14 +236,15 @@ export const programs = pgTable(
       .notNull(),
     user_id: uuid('user_id'),
     name: varchar('name', { length: 255 }).notNull(),
-    startDate: date('start_date').notNull(),
-    endDate: date('end_date').notNull(),
-    hasDeloadWeek: boolean('has_deload_week').default(false),
-    createdAt: timestamp('created_at', {
+    start_date: date('start_date').notNull(),
+    end_date: date('end_date').notNull(),
+    has_deload_week: boolean('has_deload_week').default(false),
+    duration_weeks: integer('duration_weeks').notNull(),
+    created_at: timestamp('created_at', {
       withTimezone: true,
       mode: 'string',
     }).defaultNow(),
-    updatedAt: timestamp('updated_at', {
+    updated_at: timestamp('updated_at', {
       withTimezone: true,
       mode: 'string',
     }).defaultNow(),

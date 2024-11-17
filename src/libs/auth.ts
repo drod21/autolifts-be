@@ -8,7 +8,7 @@ import cookie from '@elysiajs/cookie'
 
 export const ACCESS_TOKEN_EXPIRY = 15 * 60
 export const REFRESH_TOKEN_EXPIRY = 60 * 60 * 24 * 14
-const verifyRefreshToken = async (token: string) => {
+export const verifyRefreshToken = async (token: string) => {
   console.log('verifying...')
   const tokens = await db
     .select({

@@ -82,6 +82,7 @@ export const authModule = (app: Elysia) =>
     .post(
       '/login',
       async ({
+        headers,
         body,
         signAccessToken,
         signRefreshToken,
@@ -138,6 +139,7 @@ export const authModule = (app: Elysia) =>
         refreshTokenCookie.path = '/'
 
         return {
+          headers,
           accessToken,
           refreshToken: refreshToken.refresh_token,
           user: { name: user[0].name, email: user[0].email },

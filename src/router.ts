@@ -8,6 +8,8 @@ import {
   programs,
   ProgramInsert,
   SessionSetInsert,
+  userTokens,
+  users,
 } from './drizzle/schema'
 import { NotFoundError } from './errors'
 import { cache } from './cache'
@@ -16,7 +18,7 @@ import {
   getExerciseById,
   getExercises,
 } from './services/exerciseService'
-import { getPrograms } from './services/programService'
+import { createProgram, getPrograms } from './services/programService'
 import {
   createWorkout,
   CreateWorkoutInput,
@@ -33,11 +35,20 @@ import {
 import { createSet, getSetsByWorkoutExerciseId } from './services/setService'
 import { getMuscleGroups, getMovementTypes } from './services/extras'
 import { supabase } from './libs/supabase'
+import { eq } from 'drizzle-orm'
 import swagger from '@elysiajs/swagger'
+import { verifyRefreshToken } from './libs/auth'
+import jwt from '@elysiajs/jwt'
 
 // Initialize the Elysia app
 const router = (app: Elysia) =>
   app
+    .use(
+      jwt({
+        name: 'jwt',
+        secret: process.env.JWT_SECRET ?? '',
+      }),
+    )
     .use(
       swagger({
         documentation: {
@@ -174,38 +185,72 @@ const router = (app: Elysia) =>
     )
 
     // Programs Routes
-    .get('/programs', async () => {
+    .get('/programs', async ({ cookie: { refreshToken } }) => {
       try {
-        const allPrograms = await getPrograms()
+        let token = refreshToken.value ?? ''
+        if (token?.includes('accessToken')) {
+          token = token.split(',')[0]
+        }
+        if (!token) {
+          return { error: 'Unauthorized', status: 401 }
+        }
+
+        const tokens = await db
+          .select({
+            user_tokens: userTokens,
+            users: { id: users.id, name: users.name, email: users.email },
+          })
+          .from(userTokens)
+          .where(eq(userTokens.refresh_token, token))
+          .leftJoin(users, eq(userTokens.user_id, users.id))
+          .limit(1)
+        const allPrograms = await getPrograms(tokens[0]?.users?.id ?? '')
         return allPrograms
       } catch (error) {
         console.error('Error fetching programs:', error)
         return { error: 'Internal Server Error' }
       }
     })
-    .post('/programs', async ({ body, set }) => {
+    .post('/programs', async ({ body, set, cookie: { refreshToken } }) => {
       try {
-        const { name, startDate, endDate, hasDeloadWeek, user_id } =
+        console.log(refreshToken)
+        const token =
+          (body as Record<string, any>).refreshToken ?? refreshToken.value
+        if (!token) {
+          set.status = 401
+          return { error: 'Unauthorized' }
+        }
+        // const tokens = await db
+        //   .select({
+        //     user_tokens: userTokens,
+        //     users: { id: users.id, name: users.name, email: users.email },
+        //   })
+        //   .from(userTokens)
+        //   .where(eq(userTokens.refresh_token, refreshToken.value))
+        //   .leftJoin(users, eq(userTokens.user_id, users.id))
+        //   .limit(1)
+        const user = await verifyRefreshToken(token)
+        if (!user) {
+          set.status = 401
+          return { error: 'Unauthorized' }
+        }
+        const { name, start_date, end_date, has_deload_week } =
           body as ProgramInsert
 
-        if (!name || !startDate || !endDate || !user_id) {
+        if (!name || !start_date || !end_date) {
           set.status = 400
           return { error: 'Missing required fields' }
         }
+        const newProgram = await createProgram({
+          name,
+          start_date,
+          end_date,
+          user_id: user?.id ?? '',
+          deload_week: has_deload_week ?? false,
+          duration_weeks: 4,
+        })
 
-        const newProgram = await db
-          .insert(programs)
-          .values({
-            name,
-            startDate,
-            endDate,
-            hasDeloadWeek: hasDeloadWeek ?? false,
-            user_id,
-          })
-          .returning()
-          .execute()
-
-        return newProgram[0]
+        return newProgram
       } catch (error) {
         console.error('Error creating program:', error)
         set.status = 500
