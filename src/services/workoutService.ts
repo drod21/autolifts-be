@@ -11,7 +11,7 @@ import {
   Exercise,
   WorkoutExercise,
 } from '../drizzle/schema'
-import { eq, desc, count } from 'drizzle-orm'
+import { eq, desc, count, and } from 'drizzle-orm'
 import { NotFoundError } from '../errors'
 import { createSets } from './setService'
 import {
@@ -37,7 +37,10 @@ export type WorkoutExerciseWithDetails = WorkoutExercise & {
   sessionSets: SessionSet[]
 }
 
-export const getWorkouts = async (includeExerciseCount = false) => {
+export const getWorkouts = async (
+  userId: string,
+  includeExerciseCount = false,
+) => {
   return await db
     .select({
       name: workouts.name,
@@ -50,22 +53,23 @@ export const getWorkouts = async (includeExerciseCount = false) => {
     .leftJoin(workoutExercises, eq(workouts.id, workoutExercises.workout_id))
     .groupBy(workouts.id)
     .orderBy(desc(workouts.createdAt))
+    .where(eq(workouts.user_id, userId))
     .execute()
 }
-export const getWorkoutById = async (id: string) => {
+export const getWorkoutById = async (id: string, userId: string) => {
   const workout = await db
     .select()
     .from(workouts)
-    .where(eq(workouts.id, id))
+    .where(and(eq(workouts.id, id), eq(workouts.user_id, userId)))
     .execute()
-  console.log('workout', workout)
+
   if (workout.length === 0) {
     throw new NotFoundError('Workout not found')
   }
   return workout[0]
 }
 
-export const createWorkout = async (input: WorkoutInsert) => {
+export const createWorkout = async (input: WorkoutInsert, userId: string) => {
   const { name, description, user_id = null } = input
 
   const newWorkout = await db
@@ -73,7 +77,7 @@ export const createWorkout = async (input: WorkoutInsert) => {
     .values({
       name,
       description,
-      user_id,
+      user_id: userId ?? user_id,
     })
     .returning()
     .execute()
@@ -85,10 +89,12 @@ export const createWorkoutWithWorkoutExercisesAndSets = async (input: {
   workout: WorkoutInsert
   workoutExercises: WorkoutExerciseInsert[]
   sets: (SessionSetInsert & { workout_exercise_index: number })[]
+  userId: string
 }) => {
-  const { workout, workoutExercises, sets } = input
+  // const supabaseClient = supabase(request)
+  const { workout, workoutExercises, sets, userId } = input
 
-  const newWorkout = await createWorkout(workout)
+  const newWorkout = await createWorkout(workout, userId)
 
   if (!newWorkout) {
     throw new Error('Failed to create workout')
@@ -98,12 +104,10 @@ export const createWorkoutWithWorkoutExercisesAndSets = async (input: {
     workout_id: newWorkout.id,
   }))
   const newWorkoutExercises = await createWorkoutExercises(we)
-  console.log('aaa', newWorkoutExercises)
   const mapped = sets.map(({ id, ...set }) => ({
     ...set,
     workout_exercise_id: newWorkoutExercises[set.workout_exercise_index].id,
   }))
-  console.log('bbb', mapped)
   const newSets = await createSets(mapped)
 
   return {
@@ -113,8 +117,11 @@ export const createWorkoutWithWorkoutExercisesAndSets = async (input: {
   }
 }
 
-export const fetchWorkoutWithWorkoutExercisesAndSets = async (id: string) => {
-  const workout = await getWorkoutById(id)
+export const fetchWorkoutWithWorkoutExercisesAndSets = async (
+  id: string,
+  userId: string,
+) => {
+  const workout = await getWorkoutById(id, userId)
   const workoutExercises = await getWorkoutExercisesByWorkoutId(id)
   return {
     workout,
@@ -122,8 +129,8 @@ export const fetchWorkoutWithWorkoutExercisesAndSets = async (id: string) => {
   }
 }
 
-export const fetchWorkoutsWithWorkoutExercises = async () => {
-  const workouts = await getWorkouts()
+export const fetchWorkoutsWithWorkoutExercises = async (userId: string) => {
+  const workouts = await getWorkouts(userId)
   const workoutExercisePromises = workouts.map(({ id }) =>
     getWorkoutExercisesByWorkoutId(id),
   )
@@ -136,9 +143,9 @@ export const fetchWorkoutsWithWorkoutExercises = async () => {
   }
 }
 
-export const fetchWorkoutsWithDetails = async (): Promise<
-  WorkoutWithDetails[]
-> => {
+export const fetchWorkoutsWithDetails = async (
+  userId: string,
+): Promise<WorkoutWithDetails[]> => {
   const result = await db
     .select({
       workout: {
@@ -185,6 +192,7 @@ export const fetchWorkoutsWithDetails = async (): Promise<
       sessionSets,
       eq(workoutExercises.id, sessionSets.workout_exercise_id),
     )
+    .where(eq(workouts.user_id, userId))
     .execute()
 
   let workoutWithDetails = result.map((r) => ({
@@ -217,7 +225,7 @@ export const fetchWorkoutsWithDetails = async (): Promise<
               },
             ]
           : [],
-        exerwcise: r.exercise,
+        exercise: r.exercise,
       })
     }
   }

@@ -1,1 +1,0 @@
-ALTER TABLE "users" DROP COLUMN IF EXISTS "supabase_auth_uid";

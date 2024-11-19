@@ -10,6 +10,7 @@ import {
   SessionSetInsert,
   userTokens,
   users,
+  ProgramWorkoutInsert,
 } from './drizzle/schema'
 import { NotFoundError } from './errors'
 import { cache } from './cache'
@@ -18,7 +19,12 @@ import {
   getExerciseById,
   getExercises,
 } from './services/exerciseService'
-import { createProgram, getPrograms } from './services/programService'
+import {
+  createProgram,
+  createProgramWorkout,
+  createProgramWorkouts,
+  getPrograms,
+} from './services/programService'
 import {
   createWorkout,
   CreateWorkoutInput,
@@ -37,8 +43,10 @@ import { getMuscleGroups, getMovementTypes } from './services/extras'
 import { supabase } from './libs/supabase'
 import { eq } from 'drizzle-orm'
 import swagger from '@elysiajs/swagger'
-import { verifyRefreshToken } from './libs/auth'
 import jwt from '@elysiajs/jwt'
+import bearer from '@elysiajs/bearer'
+import type { AuthContext } from './types/auth'
+import { TablesInsert } from './types/supabase'
 
 // Initialize the Elysia app
 const router = (app: Elysia) =>
@@ -49,6 +57,28 @@ const router = (app: Elysia) =>
         secret: process.env.JWT_SECRET ?? '',
       }),
     )
+    .use(bearer())
+    .derive(async ({ cookie: { access_token, refresh_token }, request }) => {
+      const supabaseClient = supabase(request)
+      const { data, error } = await supabaseClient.auth.getUser()
+
+      if (data.user)
+        return {
+          userId: data.user.id,
+        }
+
+      const { data: refreshed, error: refreshError } =
+        await supabaseClient.auth.refreshSession({
+          refresh_token: refresh_token.value ?? '',
+        })
+
+      if (refreshError) return
+
+      return {
+        userId: refreshed.user!.id,
+      }
+    })
+
     .use(
       swagger({
         documentation: {
@@ -85,10 +115,9 @@ const router = (app: Elysia) =>
       app
         .get(
           '/',
-          async ({ query, cookie: { access_token } }) => {
-            const { data, error } = await supabase.auth.getUser(
-              access_token.value,
-            )
+          async ({ query, cookie: { access_token }, request }) => {
+            const supabaseClient = supabase(request)
+            const { data, error } = await supabaseClient.auth.getUser()
 
             try {
               const allExercises = await getExercises(
@@ -185,38 +214,24 @@ const router = (app: Elysia) =>
     )
 
     // Programs Routes
-    .get('/programs', async ({ cookie: { refreshToken } }) => {
-      try {
-        let token = refreshToken.value ?? ''
-        if (token?.includes('accessToken')) {
-          token = token.split(',')[0]
-        }
-        if (!token) {
-          return { error: 'Unauthorized', status: 401 }
-        }
+    .get('/programs', async ({ userId, set }) => {
+      if (!userId) {
+        set.status = 401
+        return { error: 'Unauthorized' }
+      }
 
-        const tokens = await db
-          .select({
-            user_tokens: userTokens,
-            users: { id: users.id, name: users.name, email: users.email },
-          })
-          .from(userTokens)
-          .where(eq(userTokens.refresh_token, token))
-          .leftJoin(users, eq(userTokens.user_id, users.id))
-          .limit(1)
-        const allPrograms = await getPrograms(tokens[0]?.users?.id ?? '')
+      try {
+        const allPrograms = await getPrograms(userId)
+        console.log(allPrograms)
         return allPrograms
       } catch (error) {
         console.error('Error fetching programs:', error)
         return { error: 'Internal Server Error' }
       }
     })
-    .post('/programs', async ({ body, set, cookie: { refreshToken } }) => {
+    .post('/programs', async ({ userId, body, set }) => {
       try {
-        console.log(refreshToken)
-        const token =
-          (body as Record<string, any>).refreshToken ?? refreshToken.value
-        if (!token) {
+        if (!userId) {
           set.status = 401
           return { error: 'Unauthorized' }
         }
@@ -229,13 +244,14 @@ const router = (app: Elysia) =>
         //   .where(eq(userTokens.refresh_token, refreshToken.value))
         //   .leftJoin(users, eq(userTokens.user_id, users.id))
         //   .limit(1)
-        const user = await verifyRefreshToken(token)
-        if (!user) {
-          set.status = 401
-          return { error: 'Unauthorized' }
-        }
-        const { name, start_date, end_date, has_deload_week } =
-          body as ProgramInsert
+        const {
+          name,
+          start_date,
+          end_date,
+          has_deload_week,
+          duration_weeks,
+          user_id,
+        } = body as ProgramInsert
 
         if (!name || !start_date || !end_date) {
           set.status = 400
@@ -245,9 +261,9 @@ const router = (app: Elysia) =>
           name,
           start_date,
           end_date,
-          user_id: user?.id ?? '',
+          user_id: user_id ?? userId ?? '',
           deload_week: has_deload_week ?? false,
-          duration_weeks: 4,
+          duration_weeks,
         })
 
         return newProgram
@@ -257,26 +273,60 @@ const router = (app: Elysia) =>
         return { error: 'Internal Server Error' }
       }
     })
+    .get('/programs/:programId', async ({ params, set }) => {
+      const { programId } = params
+      const program = await db
+        .select()
+        .from(programs)
+        .where(eq(programs.id, programId))
+        .execute()
+      return program[0]
+    })
+    .post('/programs/:programId/workouts', async ({ params, body }) => {
+      const { programId } = params
+      const programWorkouts = body as ProgramWorkoutInsert[]
+
+      const newProgramWorkouts = await createProgramWorkouts(
+        programWorkouts.map((workout) => ({
+          ...workout,
+          program_id: programId,
+        })),
+      )
+      return newProgramWorkouts
+    })
 
     // Workouts Routes
-    .get('/workouts', async () => {
+    .get('/workouts', async ({ userId, request }) => {
       try {
-        const allWorkouts = await getWorkouts(true)
+        if (!userId) {
+          return { error: 'Unauthorized' }
+        }
+        const allWorkouts = await getWorkouts(userId, true)
         return allWorkouts
       } catch (error) {
         console.error('Error fetching workouts:', error)
         return { error: 'Internal Server Error' }
       }
     })
-    .get('/workouts/details', async () => {
-      const workoutsWithExercises = await fetchWorkoutsWithDetails()
+    .get('/workouts/details', async ({ userId }) => {
+      if (!userId) {
+        return { error: 'Unauthorized' }
+      }
+      const workoutsWithExercises = await fetchWorkoutsWithDetails(userId)
       return workoutsWithExercises
     })
-    .get('/workouts/:workoutId', async ({ params, set }) => {
+    .get('/workouts/:workoutId', async ({ params, set, userId }) => {
       try {
         const { workoutId } = params
+        if (!userId) {
+          set.status = 401
+          return { error: 'Unauthorized' }
+        }
 
-        const workout = await fetchWorkoutWithWorkoutExercisesAndSets(workoutId)
+        const workout = await fetchWorkoutWithWorkoutExercisesAndSets(
+          workoutId,
+          userId,
+        )
         return workout
       } catch (error) {
         if (error instanceof NotFoundError) {
@@ -288,24 +338,62 @@ const router = (app: Elysia) =>
         return { error: 'Internal Server Error' }
       }
     })
-    .post('/workouts', async ({ body, set }) => {
+    .post('/workouts', async ({ body, set, userId, request }) => {
       try {
+        console.log(request.headers, userId)
+
         const { workout, workoutExercises, sets } = body as {
           workout: CreateWorkoutInput
           workoutExercises: WorkoutExerciseInsert[]
           sets: (SessionSetInsert & { workout_exercise_index: number })[]
         }
+        const supabaseClient = supabase(request)
+        const { data: newWorkout, error: workoutError } = await supabaseClient
+          .from('workouts')
+          .insert({ ...workout })
+          .select()
+          .single()
 
-        if (workoutExercises.length && sets.length) {
-          const newWorkout = await createWorkoutWithWorkoutExercisesAndSets({
-            workoutExercises,
-            workout,
-            sets,
-          })
+        if (workoutExercises.length && sets.length && newWorkout) {
+          const mappedExercises = workoutExercises.map((exercise) => ({
+            ...exercise,
+            workout_id: newWorkout.id,
+            exercise_id: exercise.exercise_id,
+          }))
 
-          return newWorkout
+          const newWorkoutExercises = await supabaseClient
+            .from('workout_exercises')
+            .insert(mappedExercises as TablesInsert<'workout_exercises'>[])
+            .select()
+
+          if (!newWorkoutExercises.data) {
+            throw new Error('Failed to create workout exercises')
+          }
+          const mappedSets = sets.map((set) => ({
+            ...set,
+            workout_exercise_id:
+              newWorkoutExercises.data[set.workout_exercise_index].id,
+          }))
+
+          const newSets = await supabaseClient
+            .from('session_sets')
+            .insert(mappedSets as TablesInsert<'session_sets'>[])
+            .select()
+
+          return {
+            workout: newWorkout,
+            workoutExercises: newWorkoutExercises.data,
+            sets: newSets.data,
+          }
         }
-        const newWorkout = createWorkout(workout)
+
+        // const newWorkout = await createWorkoutWithWorkoutExercisesAndSets({
+        //   workoutExercises,
+        //   workout,
+        //   sets,
+        //   userId,
+        // })
+
         return newWorkout
       } catch (error) {
         console.error('Error creating workout:', error)
@@ -439,7 +527,7 @@ const router = (app: Elysia) =>
             weight: weight.toString(),
             planned_reps: reps,
             rpe: rpe ?? null,
-            isComplete: completed ?? false,
+            is_complete: completed ?? false,
             workout_exercise_id: workoutExerciseId,
             set_number: 1,
           })

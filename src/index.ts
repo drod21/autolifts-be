@@ -4,8 +4,10 @@ import { authModule } from './modules/auth'
 import { cors } from '@elysiajs/cors'
 import { cache } from './cache'
 import { SessionSetInsert } from './drizzle/schema'
+import cookie from '@elysiajs/cookie'
 
 const app = new Elysia()
+  .use(cookie())
   .ws('/ws/sets', {
     // validate incoming message
     body: t.Object({
@@ -51,12 +53,11 @@ const app = new Elysia()
 
   .use(authModule)
   .use(router)
-  .use(async (plugin) => {
+  .use(async (plugin: Elysia) => {
     plugin.onBeforeHandle((ctx) => {
       console.time('------ request ------')
       // console.log(ctx.request.method)
       console.log(ctx.request.url)
-      console.log(ctx.headers)
       // console.log(ctx.request.headers)
       // if (ctx.request.body) console.log(ctx.request.body.values())
       console.log('------ request ------')
@@ -67,8 +68,8 @@ const app = new Elysia()
       console.timeEnd('------ response ------')
     })
 
-    plugin.onError((error) => {
-      console.error('error', error)
+    plugin.onError(({ error, code }) => {
+      console.trace('error', error, code)
     })
     return plugin
   })

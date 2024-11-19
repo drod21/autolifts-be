@@ -1,7 +1,6 @@
 import { relations } from 'drizzle-orm/relations'
 import {
   users,
-  userTokens,
   workouts,
   movementTypes,
   exercises,
@@ -14,15 +13,7 @@ import {
   autoRegulationSettings,
 } from './schema'
 
-export const userTokensRelations = relations(userTokens, ({ one }) => ({
-  user: one(users, {
-    fields: [userTokens.userId],
-    references: [users.id],
-  }),
-}))
-
 export const usersRelations = relations(users, ({ many }) => ({
-  userTokens: many(userTokens),
   workouts: many(workouts),
   exercises: many(exercises),
   programs: many(programs),
@@ -32,7 +23,7 @@ export const usersRelations = relations(users, ({ many }) => ({
 
 export const workoutsRelations = relations(workouts, ({ one, many }) => ({
   user: one(users, {
-    fields: [workouts.userId],
+    fields: [workouts.user_id],
     references: [users.id],
   }),
   workoutExercises: many(workoutExercises),
@@ -50,7 +41,7 @@ export const exercisesRelations = relations(exercises, ({ one, many }) => ({
     references: [muscleGroups.id],
   }),
   user: one(users, {
-    fields: [exercises.userId],
+    fields: [exercises.user_id],
     references: [users.id],
   }),
   workoutExercises: many(workoutExercises),
@@ -69,11 +60,11 @@ export const workoutExercisesRelations = relations(
   workoutExercises,
   ({ one, many }) => ({
     exercise: one(exercises, {
-      fields: [workoutExercises.exerciseId],
+      fields: [workoutExercises.exercise_id],
       references: [exercises.id],
     }),
     workout: one(workouts, {
-      fields: [workoutExercises.workoutId],
+      fields: [workoutExercises.workout_id],
       references: [workouts.id],
     }),
     sessionSets: many(sessionSets),
@@ -82,7 +73,7 @@ export const workoutExercisesRelations = relations(
 
 export const programsRelations = relations(programs, ({ one, many }) => ({
   user: one(users, {
-    fields: [programs.userId],
+    fields: [programs.user_id],
     references: [users.id],
   }),
   programWorkouts: many(programWorkouts),
@@ -93,11 +84,11 @@ export const programWorkoutsRelations = relations(
   programWorkouts,
   ({ one }) => ({
     program: one(programs, {
-      fields: [programWorkouts.programId],
+      fields: [programWorkouts.program_id],
       references: [programs.id],
     }),
     workout: one(workouts, {
-      fields: [programWorkouts.workoutId],
+      fields: [programWorkouts.workout_id],
       references: [workouts.id],
     }),
   }),
@@ -107,15 +98,15 @@ export const workoutSessionsRelations = relations(
   workoutSessions,
   ({ one, many }) => ({
     program: one(programs, {
-      fields: [workoutSessions.programId],
+      fields: [workoutSessions.program_id],
       references: [programs.id],
     }),
     user: one(users, {
-      fields: [workoutSessions.userId],
+      fields: [workoutSessions.user_id],
       references: [users.id],
     }),
     workout: one(workouts, {
-      fields: [workoutSessions.workoutId],
+      fields: [workoutSessions.workout_id],
       references: [workouts.id],
     }),
     sessionSets: many(sessionSets),
@@ -124,15 +115,15 @@ export const workoutSessionsRelations = relations(
 
 export const sessionSetsRelations = relations(sessionSets, ({ one }) => ({
   exercise: one(exercises, {
-    fields: [sessionSets.exerciseId],
+    fields: [sessionSets.exercise_id],
     references: [exercises.id],
   }),
   workoutSession: one(workoutSessions, {
-    fields: [sessionSets.sessionId],
+    fields: [sessionSets.session_id],
     references: [workoutSessions.id],
   }),
   workoutExercise: one(workoutExercises, {
-    fields: [sessionSets.workoutExerciseId],
+    fields: [sessionSets.workout_exercise_id],
     references: [workoutExercises.id],
   }),
 }))
@@ -141,7 +132,7 @@ export const autoRegulationSettingsRelations = relations(
   autoRegulationSettings,
   ({ one }) => ({
     user: one(users, {
-      fields: [autoRegulationSettings.userId],
+      fields: [autoRegulationSettings.user_id],
       references: [users.id],
     }),
   }),

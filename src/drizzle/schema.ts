@@ -17,28 +17,6 @@ import {
 } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 
-export const userTokens = pgTable(
-  'user_tokens',
-  {
-    id: uuid('id').primaryKey().notNull(),
-    user_id: uuid('user_id'),
-    refresh_token: text('refresh_token').notNull(),
-    created_at: timestamp('created_at', { mode: 'string' }).defaultNow(),
-    expires_at: timestamp('expires_at', { mode: 'string' }).notNull(),
-  },
-  (table) => {
-    return {
-      userTokensuser_idFkey: foreignKey({
-        columns: [table.user_id],
-        foreignColumns: [users.id],
-        name: 'user_tokens_user_id_fkey',
-      })
-        .onUpdate('cascade')
-        .onDelete('cascade'),
-    }
-  },
-)
-
 export const muscleGroups = pgTable(
   'muscle_groups',
   {
@@ -68,21 +46,11 @@ export const movementTypes = pgTable(
 export const users = pgTable(
   'users',
   {
-    id: uuid('id')
-      .default(sql`uuid_generate_v4()`)
-      .primaryKey()
-      .notNull(),
-    email: varchar('email', { length: 255 }).notNull(),
-    name: varchar('name', { length: 255 }),
-    createdAt: timestamp('created_at', {
-      withTimezone: true,
-      mode: 'string',
-    }).defaultNow(),
-    updatedAt: timestamp('updated_at', {
-      withTimezone: true,
-      mode: 'string',
-    }).defaultNow(),
-    password: text('password'),
+    id: text('id').primaryKey(),
+    email: text('email').notNull(),
+    name: text('name'),
+    created_at: timestamp('created_at').defaultNow(),
+    updated_at: timestamp('updated_at').defaultNow(),
   },
   (table) => {
     return {
@@ -271,17 +239,17 @@ export const programWorkouts = pgTable(
       .default(sql`uuid_generate_v4()`)
       .primaryKey()
       .notNull(),
-    programId: uuid('program_id'),
+    program_id: uuid('program_id'),
     workout_id: uuid('workout_id'),
-    weekNumber: integer('week_number').notNull(),
+    week_number: integer('week_number').notNull(),
     day: integer('day'),
-    scheduledDate: date('scheduled_date'),
-    isDeload: boolean('is_deload').default(false),
-    createdAt: timestamp('created_at', {
+    scheduled_date: date('scheduled_date'),
+    is_deload: boolean('is_deload').default(false),
+    created_at: timestamp('created_at', {
       withTimezone: true,
       mode: 'string',
     }).defaultNow(),
-    updatedAt: timestamp('updated_at', {
+    updated_at: timestamp('updated_at', {
       withTimezone: true,
       mode: 'string',
     }).defaultNow(),
@@ -290,15 +258,15 @@ export const programWorkouts = pgTable(
     return {
       idxProgramWorkoutsProgramId: index(
         'idx_program_workouts_program_id',
-      ).using('btree', table.programId.asc().nullsLast()),
+      ).using('btree', table.program_id.asc().nullsLast()),
       idxProgramWorkoutsScheduledDate: index(
         'idx_program_workouts_scheduled_date',
-      ).using('btree', table.scheduledDate.asc().nullsLast()),
+      ).using('btree', table.scheduled_date.asc().nullsLast()),
       idxProgramWorkoutsWorkoutId: index(
         'idx_program_workouts_workout_id',
       ).using('btree', table.workout_id.asc().nullsLast()),
       programWorkoutsProgramIdFkey: foreignKey({
-        columns: [table.programId],
+        columns: [table.program_id],
         foreignColumns: [programs.id],
         name: 'program_workouts_program_id_fkey',
       }).onDelete('cascade'),
@@ -320,7 +288,7 @@ export const workoutSessions = pgTable(
       .notNull(),
     user_id: uuid('user_id'),
     workout_id: uuid('workout_id'),
-    programId: uuid('program_id'),
+    program_id: uuid('program_id'),
     scheduled_date: date('scheduled_date'),
     actual_start: timestamp('actual_start', {
       withTimezone: true,
@@ -330,11 +298,11 @@ export const workoutSessions = pgTable(
     duration: interval('duration').generatedAlwaysAs(
       sql`(actual_end - actual_start)`,
     ),
-    createdAt: timestamp('created_at', {
+    created_at: timestamp('created_at', {
       withTimezone: true,
       mode: 'string',
     }).defaultNow(),
-    updatedAt: timestamp('updated_at', {
+    updated_at: timestamp('updated_at', {
       withTimezone: true,
       mode: 'string',
     }).defaultNow(),
@@ -343,7 +311,7 @@ export const workoutSessions = pgTable(
     return {
       idxWorkoutSessionsProgramId: index(
         'idx_workout_sessions_program_id',
-      ).using('btree', table.programId.asc().nullsLast()),
+      ).using('btree', table.program_id.asc().nullsLast()),
       idxWorkoutSessionsuser_id: index('idx_workout_sessions_user_id').using(
         'btree',
         table.user_id.asc().nullsLast(),
@@ -352,7 +320,7 @@ export const workoutSessions = pgTable(
         'idx_workout_sessions_workout_id',
       ).using('btree', table.workout_id.asc().nullsLast()),
       workoutSessionsProgramIdFkey: foreignKey({
-        columns: [table.programId],
+        columns: [table.program_id],
         foreignColumns: [programs.id],
         name: 'workout_sessions_program_id_fkey',
       }).onDelete('set null'),
@@ -385,12 +353,12 @@ export const sessionSets = pgTable(
     actual_reps: integer('actual_reps'),
     weight: numeric('weight', { precision: 10, scale: 2 }),
     rpe: integer('rpe'),
-    isComplete: boolean('is_complete').default(false),
-    createdAt: timestamp('created_at', {
+    is_complete: boolean('is_complete').default(false),
+    created_at: timestamp('created_at', {
       withTimezone: true,
       mode: 'string',
     }).defaultNow(),
-    updatedAt: timestamp('updated_at', {
+    updated_at: timestamp('updated_at', {
       withTimezone: true,
       mode: 'string',
     }).defaultNow(),
@@ -433,11 +401,11 @@ export const autoRegulationSettings = pgTable(
       .notNull(),
     user_id: uuid('user_id'),
     parameters: jsonb('parameters'),
-    createdAt: timestamp('created_at', {
+    created_at: timestamp('created_at', {
       withTimezone: true,
       mode: 'string',
     }).defaultNow(),
-    updatedAt: timestamp('updated_at', {
+    updated_at: timestamp('updated_at', {
       withTimezone: true,
       mode: 'string',
     }).defaultNow(),
@@ -468,11 +436,8 @@ export type MuscleGroupInsert = typeof muscleGroups.$inferInsert
 export type MovementType = typeof movementTypes.$inferSelect
 export type MovementTypeInsert = typeof movementTypes.$inferInsert
 
-export type User = typeof users.$inferSelect
+export type User = Omit<typeof users.$inferSelect, 'password'>
 export type UserInsert = typeof users.$inferInsert
-
-export type UserToken = typeof userTokens.$inferSelect
-export type UserTokenInsert = typeof userTokens.$inferInsert
 
 export type Program = typeof programs.$inferSelect
 export type ProgramInsert = typeof programs.$inferInsert

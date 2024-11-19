@@ -9,33 +9,74 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      auto_regulation_settings: {
+        Row: {
+          created_at: string | null
+          id: string
+          parameters: Json | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          parameters?: Json | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          parameters?: Json | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'auto_regulation_settings_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: true
+            referencedRelation: 'users'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       exercises: {
         Row: {
-          created_at: string
+          created_at: string | null
           description: string | null
-          id: number
+          id: string
           image_url: string | null
+          is_system_exercise: boolean | null
           movement_type_id: number | null
           muscle_group_id: number | null
           name: string
+          updated_at: string | null
+          user_id: string | null
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           description?: string | null
-          id?: number
+          id?: string
           image_url?: string | null
+          is_system_exercise?: boolean | null
           movement_type_id?: number | null
           muscle_group_id?: number | null
           name: string
+          updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           description?: string | null
-          id?: number
+          id?: string
           image_url?: string | null
+          is_system_exercise?: boolean | null
           movement_type_id?: number | null
           muscle_group_id?: number | null
           name?: string
+          updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -50,6 +91,13 @@ export type Database = {
             columns: ['muscle_group_id']
             isOneToOne: false
             referencedRelation: 'muscle_groups'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'exercises_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'users'
             referencedColumns: ['id']
           },
         ]
@@ -84,61 +132,158 @@ export type Database = {
         }
         Relationships: []
       }
-      programs: {
+      program_workouts: {
         Row: {
-          created_at: string
-          deload_week: boolean
-          duration_weeks: number
-          id: number
-          name: string
+          created_at: string | null
+          day: number | null
+          id: string
+          is_deload: boolean | null
+          program_id: string | null
+          scheduled_date: string | null
+          updated_at: string | null
+          week_number: number
+          workout_id: string | null
         }
         Insert: {
-          created_at?: string
-          deload_week?: boolean
-          duration_weeks: number
-          id?: number
-          name: string
+          created_at?: string | null
+          day?: number | null
+          id?: string
+          is_deload?: boolean | null
+          program_id?: string | null
+          scheduled_date?: string | null
+          updated_at?: string | null
+          week_number: number
+          workout_id?: string | null
         }
         Update: {
-          created_at?: string
-          deload_week?: boolean
-          duration_weeks?: number
-          id?: number
-          name?: string
-        }
-        Relationships: []
-      }
-      sets: {
-        Row: {
-          completed: boolean
-          created_at: string
-          id: number
-          reps: number
-          rpe: number | null
-          weight: number
-          workout_exercise_id: number | null
-        }
-        Insert: {
-          completed?: boolean
-          created_at?: string
-          id?: number
-          reps: number
-          rpe?: number | null
-          weight: number
-          workout_exercise_id?: number | null
-        }
-        Update: {
-          completed?: boolean
-          created_at?: string
-          id?: number
-          reps?: number
-          rpe?: number | null
-          weight?: number
-          workout_exercise_id?: number | null
+          created_at?: string | null
+          day?: number | null
+          id?: string
+          is_deload?: boolean | null
+          program_id?: string | null
+          scheduled_date?: string | null
+          updated_at?: string | null
+          week_number?: number
+          workout_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: 'sets_workout_exercise_id_fkey'
+            foreignKeyName: 'program_workouts_program_id_fkey'
+            columns: ['program_id']
+            isOneToOne: false
+            referencedRelation: 'programs'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'program_workouts_workout_id_fkey'
+            columns: ['workout_id']
+            isOneToOne: false
+            referencedRelation: 'workouts'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      programs: {
+        Row: {
+          created_at: string | null
+          end_date: string
+          has_deload_week: boolean | null
+          id: string
+          name: string
+          start_date: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          end_date: string
+          has_deload_week?: boolean | null
+          id?: string
+          name: string
+          start_date: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          end_date?: string
+          has_deload_week?: boolean | null
+          id?: string
+          name?: string
+          start_date?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'programs_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'users'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      session_sets: {
+        Row: {
+          actual_reps: number | null
+          created_at: string | null
+          exercise_id: string
+          id: string
+          is_complete: boolean | null
+          planned_reps: number | null
+          rpe: number | null
+          session_id: string | null
+          set_number: number
+          updated_at: string | null
+          weight: number | null
+          workout_exercise_id: string
+        }
+        Insert: {
+          actual_reps?: number | null
+          created_at?: string | null
+          exercise_id: string
+          id?: string
+          is_complete?: boolean | null
+          planned_reps?: number | null
+          rpe?: number | null
+          session_id?: string | null
+          set_number: number
+          updated_at?: string | null
+          weight?: number | null
+          workout_exercise_id: string
+        }
+        Update: {
+          actual_reps?: number | null
+          created_at?: string | null
+          exercise_id?: string
+          id?: string
+          is_complete?: boolean | null
+          planned_reps?: number | null
+          rpe?: number | null
+          session_id?: string | null
+          set_number?: number
+          updated_at?: string | null
+          weight?: number | null
+          workout_exercise_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'session_sets_exercise_id_fkey'
+            columns: ['exercise_id']
+            isOneToOne: false
+            referencedRelation: 'exercises'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'session_sets_session_id_fkey'
+            columns: ['session_id']
+            isOneToOne: false
+            referencedRelation: 'workout_sessions'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'session_sets_workout_exercise_id_fkey'
             columns: ['workout_exercise_id']
             isOneToOne: false
             referencedRelation: 'workout_exercises'
@@ -146,39 +291,104 @@ export type Database = {
           },
         ]
       }
-      workout_exercises: {
+      user_tokens: {
         Row: {
-          created_at: string
-          exercise_id: number | null
-          id: number
-          reps_max: number
-          reps_min: number | null
-          rest_timer: number
-          sets: number
-          target_weight: number
-          workout_id: number | null
+          created_at: string | null
+          expires_at: string
+          id: string
+          refresh_token: string
+          user_id: string | null
         }
         Insert: {
-          created_at?: string
-          exercise_id?: number | null
-          id?: number
-          reps_max: number
-          reps_min?: number | null
-          rest_timer: number
-          sets: number
-          target_weight?: number
-          workout_id?: number | null
+          created_at?: string | null
+          expires_at: string
+          id: string
+          refresh_token: string
+          user_id?: string | null
         }
         Update: {
-          created_at?: string
-          exercise_id?: number | null
-          id?: number
-          reps_max?: number
-          reps_min?: number | null
-          rest_timer?: number
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          refresh_token?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'user_tokens_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'users'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      users: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+          name: string | null
+          password: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id?: string
+          name?: string | null
+          password?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+          name?: string | null
+          password?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      workout_exercises: {
+        Row: {
+          created_at: string | null
+          exercise_id: string
+          id: string
+          rep_max: number | null
+          rep_min: number | null
+          rest_timer: number | null
+          sets: number
+          total_reps: number | null
+          updated_at: string | null
+          weight: number | null
+          workout_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          exercise_id: string
+          id?: string
+          rep_max?: number | null
+          rep_min?: number | null
+          rest_timer?: number | null
+          sets: number
+          total_reps?: number | null
+          updated_at?: string | null
+          weight?: number | null
+          workout_id: string
+        }
+        Update: {
+          created_at?: string | null
+          exercise_id?: string
+          id?: string
+          rep_max?: number | null
+          rep_min?: number | null
+          rest_timer?: number | null
           sets?: number
-          target_weight?: number
-          workout_id?: number | null
+          total_reps?: number | null
+          updated_at?: string | null
+          weight?: number | null
+          workout_id?: string
         }
         Relationships: [
           {
@@ -197,34 +407,98 @@ export type Database = {
           },
         ]
       }
-      workouts: {
+      workout_sessions: {
         Row: {
-          created_at: string
-          date: string
-          id: number
-          name: string
-          program_id: number | null
+          actual_end: string | null
+          actual_start: string | null
+          created_at: string | null
+          duration: unknown | null
+          id: string
+          program_id: string | null
+          scheduled_date: string | null
+          updated_at: string | null
+          user_id: string | null
+          workout_id: string | null
         }
         Insert: {
-          created_at?: string
-          date: string
-          id?: number
-          name: string
-          program_id?: number | null
+          actual_end?: string | null
+          actual_start?: string | null
+          created_at?: string | null
+          duration?: unknown | null
+          id?: string
+          program_id?: string | null
+          scheduled_date?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          workout_id?: string | null
         }
         Update: {
-          created_at?: string
-          date?: string
-          id?: number
-          name?: string
-          program_id?: number | null
+          actual_end?: string | null
+          actual_start?: string | null
+          created_at?: string | null
+          duration?: unknown | null
+          id?: string
+          program_id?: string | null
+          scheduled_date?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          workout_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: 'workouts_program_id_fkey'
+            foreignKeyName: 'workout_sessions_program_id_fkey'
             columns: ['program_id']
             isOneToOne: false
             referencedRelation: 'programs'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'workout_sessions_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'users'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'workout_sessions_workout_id_fkey'
+            columns: ['workout_id']
+            isOneToOne: false
+            referencedRelation: 'workouts'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      workouts: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'workouts_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'users'
             referencedColumns: ['id']
           },
         ]
@@ -327,10 +601,17 @@ export type Enums<
     ? PublicSchema['Enums'][PublicEnumNameOrOptions]
     : never
 
-type Workouts = Tables<'workouts'>
-type WorkoutExercises = Tables<'workout_exercises'>
-type Exercises = Tables<'exercises'>
-type Sets = Tables<'sets'>
-type MuscleGroups = Tables<'muscle_groups'>
-type MovementTypes = Tables<'movement_types'>
-type Programs = Tables<'programs'>
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof PublicSchema['CompositeTypes']
+    | { schema: keyof Database },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes']
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
+  ? Database[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes'][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof PublicSchema['CompositeTypes']
+    ? PublicSchema['CompositeTypes'][PublicCompositeTypeNameOrOptions]
+    : never
