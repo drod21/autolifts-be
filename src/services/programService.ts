@@ -1,5 +1,11 @@
 import { db } from '../db'
-import { programs, ProgramWorkoutInsert } from '../drizzle/schema'
+import {
+  exercises,
+  programs,
+  ProgramWorkoutInsert,
+  workoutExercises,
+  workouts,
+} from '../drizzle/schema'
 import { count, desc, eq, isNotNull } from 'drizzle-orm'
 import { programWorkouts, workoutSessions } from '../drizzle/schema'
 import { and } from 'drizzle-orm'
@@ -22,12 +28,25 @@ export const getProgram = async (programId: string) => {
       end_date: programs.end_date,
       has_deload_week: programs.has_deload_week,
       workouts_count: count(programWorkouts.id),
-      completed_workouts_count: count(workoutSessions.id),
+      programWorkouts: {
+        id: programWorkouts.id,
+        workout_sessions_count: count(workoutSessions.id),
+        workout_id: programWorkouts.workout_id,
+        workout_name: workouts.name,
+        workouts: {
+          id: workouts.id,
+          name: workouts.name,
+          exerciseCount: count(workoutExercises.id),
+        },
+      },
     })
     .from(programs)
     .leftJoin(programWorkouts, eq(programs.id, programWorkouts.program_id))
     .leftJoin(workoutSessions, eq(programs.id, workoutSessions.program_id))
-    .groupBy(programs.id)
+    .leftJoin(workouts, eq(programWorkouts.workout_id, workouts.id))
+    .leftJoin(workoutExercises, eq(workouts.id, workoutExercises.workout_id))
+    .leftJoin(exercises, eq(workoutExercises.exercise_id, exercises.id))
+    .groupBy(programs.id, programWorkouts.id, workouts.id)
     .where(eq(programs.id, programId))
     .execute()
   return program[0]

@@ -20,6 +20,7 @@ import {
   getExercises,
 } from './services/exerciseService'
 import {
+  getProgram,
   createProgram,
   createProgramWorkout,
   createProgramWorkouts,
@@ -275,12 +276,14 @@ const router = (app: Elysia) =>
     })
     .get('/programs/:programId', async ({ params, set }) => {
       const { programId } = params
-      const program = await db
-        .select()
-        .from(programs)
-        .where(eq(programs.id, programId))
-        .execute()
-      return program[0]
+      // const program = await db
+      //   .select()
+      //   .from(programs)
+      //   .where(eq(programs.id, programId))
+      //   .execute()
+      // return program[0]
+      const program = await getProgram(programId)
+      return program
     })
     .post('/programs/:programId/workouts', async ({ params, body }) => {
       const { programId } = params
