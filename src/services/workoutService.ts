@@ -18,6 +18,7 @@ import {
   createWorkoutExercises,
   getWorkoutExercisesByWorkoutId,
 } from './workoutExerciseService'
+import { cache } from '../cache'
 
 export interface CreateWorkoutInput {
   name: string
@@ -146,6 +147,8 @@ export const fetchWorkoutsWithWorkoutExercises = async (userId: string) => {
 export const fetchWorkoutsWithDetails = async (
   userId: string,
 ): Promise<WorkoutWithDetails[]> => {
+  const muscleGroups = await cache.getMuscleGroups()
+  const movementTypes = await cache.getMovementTypes()
   const result = await db
     .select({
       workout: {
@@ -169,20 +172,20 @@ export const fetchWorkoutsWithDetails = async (
         weight: sessionSets.weight,
         reps: sessionSets.actual_reps,
         rpe: sessionSets.rpe,
-        completed: sessionSets.isComplete,
-        created_at: sessionSets.createdAt,
+        completed: sessionSets.is_complete,
+        created_at: sessionSets.created_at,
       },
       exercise: {
         id: exercises.id,
         name: exercises.name,
-        imageUrl: exercises.imageUrl,
+        image_url: exercises.imageUrl,
         description: exercises.description,
-        muscleGroupId: exercises.muscleGroupId,
-        movementTypeId: exercises.movementTypeId,
-        createdAt: exercises.createdAt,
-        isSystemExercise: exercises.isSystemExercise,
+        muscle_group_id: exercises.muscle_group_id,
+        movement_type_id: exercises.movement_type_id,
+        created_at: exercises.createdAt,
+        is_system_exercise: exercises.isSystemExercise,
         user_id: exercises.user_id,
-        updatedAt: exercises.updatedAt,
+        updated_at: exercises.updatedAt,
       },
     })
     .from(workoutExercises)

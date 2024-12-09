@@ -20,6 +20,7 @@ interface CreateProgramInput {
 }
 
 export const getProgram = async (programId: string) => {
+  // First, get the program with its basic info and workout count
   const program = await db
     .select({
       id: programs.id,
@@ -28,28 +29,45 @@ export const getProgram = async (programId: string) => {
       end_date: programs.end_date,
       has_deload_week: programs.has_deload_week,
       workouts_count: count(programWorkouts.id),
-      programWorkouts: {
-        id: programWorkouts.id,
-        workout_sessions_count: count(workoutSessions.id),
-        workout_id: programWorkouts.workout_id,
-        workout_name: workouts.name,
-        workouts: {
-          id: workouts.id,
-          name: workouts.name,
-          exerciseCount: count(workoutExercises.id),
-        },
-      },
     })
     .from(programs)
     .leftJoin(programWorkouts, eq(programs.id, programWorkouts.program_id))
-    .leftJoin(workoutSessions, eq(programs.id, workoutSessions.program_id))
-    .leftJoin(workouts, eq(programWorkouts.workout_id, workouts.id))
-    .leftJoin(workoutExercises, eq(workouts.id, workoutExercises.workout_id))
-    .leftJoin(exercises, eq(workoutExercises.exercise_id, exercises.id))
-    .groupBy(programs.id, programWorkouts.id, workouts.id)
+    .groupBy(programs.id)
     .where(eq(programs.id, programId))
     .execute()
-  return program[0]
+
+  if (!program[0]) return null
+
+  // Then, get the program workouts with their details in a separate query
+  const programWorkoutsDetails = await db
+    .select({
+      id: programWorkouts.id,
+      workout_sessions_count: count(workoutSessions.id),
+      workout_id: programWorkouts.workout_id,
+      workout: {
+        id: workouts.id,
+        name: workouts.name,
+        exerciseCount: count(workoutExercises.id),
+      },
+    })
+    .from(programWorkouts)
+    .leftJoin(
+      workoutSessions,
+      and(
+        eq(programWorkouts.program_id, workoutSessions.program_id),
+        eq(programWorkouts.workout_id, workoutSessions.workout_id),
+      ),
+    )
+    .leftJoin(workouts, eq(programWorkouts.workout_id, workouts.id))
+    .leftJoin(workoutExercises, eq(workouts.id, workoutExercises.workout_id))
+    .where(eq(programWorkouts.program_id, programId))
+    .groupBy(programWorkouts.id, workouts.id)
+    .execute()
+
+  return {
+    ...program[0],
+    programWorkouts: programWorkoutsDetails,
+  }
 }
 
 export const getPrograms = async (user_id: string) => {

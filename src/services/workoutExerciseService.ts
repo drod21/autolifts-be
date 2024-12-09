@@ -12,12 +12,16 @@ import {
   muscleGroups,
   WorkoutExerciseInsert,
 } from '../drizzle/schema'
+import { cache } from '../cache'
 
 export const getWorkoutExercisesByWorkoutId = async (workout_id: string) => {
   type GroupedWorkoutExercise = {
     workoutExercise: typeof workoutExercises.$inferSelect
     sessionSets: (typeof sessionSets.$inferSelect)[]
-    exercise: typeof exercises.$inferSelect
+    exercise: typeof exercises.$inferSelect & {
+      muscle_group_name?: string
+      movement_type_name?: string
+    }
   }
   const result = await db
     .select({
@@ -33,7 +37,8 @@ export const getWorkoutExercisesByWorkoutId = async (workout_id: string) => {
     )
     .where(eq(workoutExercises.workout_id, workout_id))
     .execute()
-
+  const muscleGroups = await cache.getMuscleGroups()
+  const movementTypes = await cache.getMovementTypes()
   // Group the results by workout_exercise
   const groupedResult = result.reduce(
     (acc, row) => {
@@ -41,7 +46,18 @@ export const getWorkoutExercisesByWorkoutId = async (workout_id: string) => {
       if (!acc[workoutExerciseId as keyof typeof acc]) {
         acc[workoutExerciseId as keyof typeof acc] = {
           workoutExercise: row.workout_exercise,
-          exercise: row.exercise as typeof exercises.$inferSelect,
+          exercise: {
+            ...row.exercise,
+            muscle_group_name: muscleGroups.find(
+              (mg) => mg.id === row.exercise?.muscle_group_id,
+            )?.name,
+            movement_type_name: movementTypes.find(
+              (mt) => mt.id === row.exercise?.movement_type_id,
+            )?.name,
+          } as typeof exercises.$inferSelect & {
+            muscle_group_name?: string
+            movement_type_name?: string
+          },
           sessionSets: [],
         }
       }

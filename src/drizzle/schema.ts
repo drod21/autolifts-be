@@ -107,8 +107,8 @@ export const exercises = pgTable(
     user_id: uuid('user_id'),
     name: varchar('name', { length: 255 }).notNull(),
     description: text('description'),
-    muscleGroupId: integer('muscle_group_id'),
-    movementTypeId: integer('movement_type_id'),
+    muscle_group_id: integer('muscle_group_id'),
+    movement_type_id: integer('movement_type_id'),
     isSystemExercise: boolean('is_system_exercise').default(false),
     createdAt: timestamp('created_at', {
       withTimezone: true,
@@ -124,19 +124,19 @@ export const exercises = pgTable(
     return {
       idxExercisesMuscleGroup: index('idx_exercises_muscle_group').using(
         'btree',
-        table.muscleGroupId.asc().nullsLast(),
+        table.muscle_group_id.asc().nullsLast(),
       ),
       idxExercisesuser_id: index('idx_exercises_user_id').using(
         'btree',
         table.user_id.asc().nullsLast(),
       ),
       exercisesMovementTypeIdFkey: foreignKey({
-        columns: [table.movementTypeId],
+        columns: [table.movement_type_id],
         foreignColumns: [movementTypes.id],
         name: 'exercises_movement_type_id_fkey',
       }),
       exercisesMuscleGroupIdFkey: foreignKey({
-        columns: [table.muscleGroupId],
+        columns: [table.muscle_group_id],
         foreignColumns: [muscleGroups.id],
         name: 'exercises_muscle_group_id_fkey',
       }),
