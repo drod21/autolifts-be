@@ -27,8 +27,8 @@ const app = new Elysia()
         weight: t.Optional(t.String()),
         rpe: t.Optional(t.Number()),
         isComplete: t.Optional(t.Boolean()),
-        createdAt: t.Optional(t.String()),
-        updatedAt: t.Optional(t.String()),
+        created_at: t.Optional(t.String()),
+        updated_at: t.Optional(t.String()),
       }),
     }),
     message(

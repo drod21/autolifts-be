@@ -53,7 +53,7 @@ export const getWorkouts = async (
     .from(workouts)
     .leftJoin(workoutExercises, eq(workouts.id, workoutExercises.workout_id))
     .groupBy(workouts.id)
-    .orderBy(desc(workouts.createdAt))
+    .orderBy(desc(workouts.created_at))
     .where(eq(workouts.user_id, userId))
     .execute()
 }
@@ -154,7 +154,7 @@ export const fetchWorkoutsWithDetails = async (
       workout: {
         id: workouts.id,
         name: workouts.name,
-        createdAt: workouts.createdAt,
+        created_at: workouts.created_at,
       },
       workoutExercise: {
         id: workoutExercises.id,
@@ -164,7 +164,7 @@ export const fetchWorkoutsWithDetails = async (
         rep_min: workoutExercises.rep_min,
         rep_max: workoutExercises.rep_max,
         target_weight: workoutExercises.weight,
-        created_at: workoutExercises.createdAt,
+        created_at: workoutExercises.created_at,
       },
       sessionSet: {
         id: sessionSets.id,
@@ -178,14 +178,14 @@ export const fetchWorkoutsWithDetails = async (
       exercise: {
         id: exercises.id,
         name: exercises.name,
-        image_url: exercises.imageUrl,
+        image_url: exercises.image_url,
         description: exercises.description,
         muscle_group_id: exercises.muscle_group_id,
         movement_type_id: exercises.movement_type_id,
-        created_at: exercises.createdAt,
-        is_system_exercise: exercises.isSystemExercise,
+        created_at: exercises.created_at,
+        is_system_exercise: exercises.is_system_exercise,
         user_id: exercises.user_id,
-        updated_at: exercises.updatedAt,
+        updated_at: exercises.updated_at,
       },
     })
     .from(workoutExercises)
@@ -207,7 +207,7 @@ export const fetchWorkoutsWithDetails = async (
 
   for (const r of result) {
     const workout = workoutWithDetails.find((w) => w.id === r.workout?.id)
-    if (workout) {
+    if (workout && r.workoutExercise && r.exercise) {
       workout.workoutExercises.push({
         ...r.workoutExercise,
         sessionSets: r.sessionSet
@@ -216,22 +216,32 @@ export const fetchWorkoutsWithDetails = async (
                 id: r.sessionSet.id,
                 exercise_id: r.workoutExercise.exercise_id,
                 weight: r.sessionSet.weight,
-                createdAt: r.sessionSet.created_at,
-                updatedAt: r.sessionSet.created_at, // Assuming updatedAt is the same as createdAt for now
+                created_at: r.sessionSet.created_at,
+                updated_at: r.sessionSet.created_at, // Assuming updated_at is the same as created_at for now
                 session_id: r.workout?.id ?? null,
                 workout_exercise_id: r.sessionSet.workout_exercise_id,
                 set_number: 1, // Assuming this is the first set
                 planned_reps: r.workoutExercise.rep_max, // Using repMax as plannedReps
                 actual_reps: r.sessionSet.reps,
                 rpe: r.sessionSet.rpe,
-                isComplete: r.sessionSet.completed,
+                is_complete: r.sessionSet.completed,
               },
             ]
           : [],
         exercise: r.exercise,
+        sets: 0,
+        rest_timer: null,
+        total_reps: null,
+        weight: null,
+        created_at: null,
+        updated_at: null,
       })
     }
   }
 
-  return workoutWithDetails as unknown as WorkoutWithDetails[]
+  return workoutWithDetails.map((workout) => ({
+    ...workout,
+    name: workout.name ?? '',
+    id: Number(workout.id), // Convert string id to number
+  }))
 }

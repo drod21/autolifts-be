@@ -73,11 +73,11 @@ export const workouts = pgTable(
     user_id: uuid('user_id'),
     name: varchar('name', { length: 255 }).notNull(),
     description: text('description'),
-    createdAt: timestamp('created_at', {
+    created_at: timestamp('created_at', {
       withTimezone: true,
       mode: 'string',
     }).defaultNow(),
-    updatedAt: timestamp('updated_at', {
+    updated_at: timestamp('updated_at', {
       withTimezone: true,
       mode: 'string',
     }).defaultNow(),
@@ -109,16 +109,16 @@ export const exercises = pgTable(
     description: text('description'),
     muscle_group_id: integer('muscle_group_id'),
     movement_type_id: integer('movement_type_id'),
-    isSystemExercise: boolean('is_system_exercise').default(false),
-    createdAt: timestamp('created_at', {
+    is_system_exercise: boolean('is_system_exercise').default(false),
+    created_at: timestamp('created_at', {
       withTimezone: true,
       mode: 'string',
     }).defaultNow(),
-    updatedAt: timestamp('updated_at', {
+    updated_at: timestamp('updated_at', {
       withTimezone: true,
       mode: 'string',
     }).defaultNow(),
-    imageUrl: text('image_url'),
+    image_url: text('image_url'),
   },
   (table) => {
     return {
@@ -164,11 +164,11 @@ export const workoutExercises = pgTable(
     rep_max: integer('rep_max'),
     total_reps: integer('total_reps'),
     weight: numeric('weight', { precision: 10, scale: 2 }).default('0'),
-    createdAt: timestamp('created_at', {
+    created_at: timestamp('created_at', {
       withTimezone: true,
       mode: 'string',
     }).defaultNow(),
-    updatedAt: timestamp('updated_at', {
+    updated_at: timestamp('updated_at', {
       withTimezone: true,
       mode: 'string',
     }).defaultNow(),

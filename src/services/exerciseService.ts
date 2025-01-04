@@ -3,8 +3,6 @@ import { exercises } from '../models/exercise'
 import { cache } from '../cache'
 import { NotFoundError } from '../errors'
 import { and, desc, eq } from 'drizzle-orm'
-import { match, P } from 'ts-pattern'
-import { Sql } from 'postgres'
 
 type CreateExerciseInput = Omit<
   typeof exercises.$inferInsert,
@@ -19,6 +17,9 @@ export const getExercises = async (
   movementTypeName?: string,
   userId?: string,
 ) => {
+  if (cache.getSystemExercises().length > 0) {
+    return cache.getSystemExercises()
+  }
   const ex = await db
     .select()
     .from(exercises)
