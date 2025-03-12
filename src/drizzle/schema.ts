@@ -19,10 +19,7 @@ import { sql } from 'drizzle-orm'
 
 export const muscleGroups = pgTable(
   'muscle_groups',
-  {
-    id: serial('id').primaryKey().notNull(),
-    name: text('name').notNull(),
-  },
+  { id: serial('id').primaryKey().notNull(), name: text('name').notNull() },
   (table) => {
     return {
       muscleGroupsNameKey: unique('muscle_groups_name_key').on(table.name),
@@ -32,10 +29,7 @@ export const muscleGroups = pgTable(
 
 export const movementTypes = pgTable(
   'movement_types',
-  {
-    id: serial('id').primaryKey().notNull(),
-    name: text('name').notNull(),
-  },
+  { id: serial('id').primaryKey().notNull(), name: text('name').notNull() },
   (table) => {
     return {
       movementTypesNameKey: unique('movement_types_name_key').on(table.name),
@@ -62,6 +56,21 @@ export const users = pgTable(
     }
   },
 )
+
+export const profiles = pgTable('profiles', {
+  id: serial('id').primaryKey(),
+  user_id: uuid('user_id')
+    .notNull()
+    .references(() => users.id),
+  name: text('name'),
+  age: integer('age'),
+  height: integer('height'),
+  weight: integer('weight'),
+  goal: text('goal'),
+  experience_level: text('experience_level'),
+  workouts_per_week: integer('workouts_per_week'),
+  starting_day: text('starting_day'),
+})
 
 export const workouts = pgTable(
   'workouts',
@@ -441,7 +450,8 @@ export type UserInsert = typeof users.$inferInsert
 
 export type Program = typeof programs.$inferSelect
 export type ProgramInsert = typeof programs.$inferInsert
-
+export type Profile = typeof profiles.$inferSelect
+export type ProfileInsert = typeof profiles.$inferInsert
 export type ProgramWorkout = typeof programWorkouts.$inferSelect
 export type ProgramWorkoutInsert = typeof programWorkouts.$inferInsert
 

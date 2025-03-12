@@ -2,6 +2,7 @@ import { relations } from 'drizzle-orm/relations'
 import {
   users,
   workouts,
+  profiles,
   movementTypes,
   exercises,
   muscleGroups,
@@ -13,7 +14,11 @@ import {
   autoRegulationSettings,
 } from './schema'
 
-export const usersRelations = relations(users, ({ many }) => ({
+export const usersRelations = relations(users, ({ many, one }) => ({
+  profiles: one(profiles, {
+    fields: [users.id],
+    references: [profiles.user_id],
+  }),
   workouts: many(workouts),
   exercises: many(exercises),
   programs: many(programs),
@@ -22,10 +27,7 @@ export const usersRelations = relations(users, ({ many }) => ({
 }))
 
 export const workoutsRelations = relations(workouts, ({ one, many }) => ({
-  user: one(users, {
-    fields: [workouts.user_id],
-    references: [users.id],
-  }),
+  user: one(users, { fields: [workouts.user_id], references: [users.id] }),
   workoutExercises: many(workoutExercises),
   programWorkouts: many(programWorkouts),
   workoutSessions: many(workoutSessions),
@@ -33,17 +35,14 @@ export const workoutsRelations = relations(workouts, ({ one, many }) => ({
 
 export const exercisesRelations = relations(exercises, ({ one, many }) => ({
   movementType: one(movementTypes, {
-    fields: [exercises.movementTypeId],
+    fields: [exercises.movement_type_id],
     references: [movementTypes.id],
   }),
   muscleGroup: one(muscleGroups, {
-    fields: [exercises.muscleGroupId],
+    fields: [exercises.muscle_group_id],
     references: [muscleGroups.id],
   }),
-  user: one(users, {
-    fields: [exercises.user_id],
-    references: [users.id],
-  }),
+  user: one(users, { fields: [exercises.user_id], references: [users.id] }),
   workoutExercises: many(workoutExercises),
   sessionSets: many(sessionSets),
 }))
@@ -72,10 +71,7 @@ export const workoutExercisesRelations = relations(
 )
 
 export const programsRelations = relations(programs, ({ one, many }) => ({
-  user: one(users, {
-    fields: [programs.user_id],
-    references: [users.id],
-  }),
+  user: one(users, { fields: [programs.user_id], references: [users.id] }),
   programWorkouts: many(programWorkouts),
   workoutSessions: many(workoutSessions),
 }))

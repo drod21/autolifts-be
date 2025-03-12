@@ -41,6 +41,52 @@ export type Database = {
           },
         ]
       }
+      profiles: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string | null
+          age: number | null
+          height: number | null
+          weight: number | null
+          goal: string | null
+          experience_level: string | null
+          workouts_per_week: number | null
+          starting_day: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name?: string | null
+          age?: number | null
+          height?: number | null
+          weight?: number | null
+          goal?: string | null
+          experience_level?: string | null
+          workouts_per_week?: number | null
+          starting_day?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string | null
+          age?: number | null
+          height?: number | null
+          weight?: number | null
+          goal?: string | null
+          experience_level?: string | null
+          workouts_per_week?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'profiles_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'users'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       exercises: {
         Row: {
           created_at: string | null
@@ -103,33 +149,15 @@ export type Database = {
         ]
       }
       movement_types: {
-        Row: {
-          id: number
-          name: string
-        }
-        Insert: {
-          id?: number
-          name: string
-        }
-        Update: {
-          id?: number
-          name?: string
-        }
+        Row: { id: number; name: string }
+        Insert: { id?: number; name: string }
+        Update: { id?: number; name?: string }
         Relationships: []
       }
       muscle_groups: {
-        Row: {
-          id: number
-          name: string
-        }
-        Insert: {
-          id?: number
-          name: string
-        }
-        Update: {
-          id?: number
-          name?: string
-        }
+        Row: { id: number; name: string }
+        Insert: { id?: number; name: string }
+        Update: { id?: number; name?: string }
         Relationships: []
       }
       program_workouts: {
@@ -504,18 +532,10 @@ export type Database = {
         ]
       }
     }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      [_ in never]: never
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
+    Views: { [_ in never]: never }
+    Functions: { [_ in never]: never }
+    Enums: { [_ in never]: never }
+    CompositeTypes: { [_ in never]: never }
   }
 }
 
