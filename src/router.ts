@@ -5,11 +5,8 @@ import { db } from './db'
 import {
   WorkoutExerciseInsert,
   exercises,
-  programs,
   ProgramInsert,
   SessionSetInsert,
-  userTokens,
-  users,
   ProgramWorkoutInsert,
   ProfileInsert,
   ExerciseInsert,
