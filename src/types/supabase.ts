@@ -31,61 +31,7 @@ export type Database = {
           updated_at?: string | null
           user_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: 'auto_regulation_settings_user_id_fkey'
-            columns: ['user_id']
-            isOneToOne: true
-            referencedRelation: 'users'
-            referencedColumns: ['id']
-          },
-        ]
-      }
-      profiles: {
-        Row: {
-          created_at: string | null
-          id: string
-          name: string | null
-          age: number | null
-          height: number | null
-          weight: number | null
-          goal: string | null
-          experience_level: string | null
-          workouts_per_week: number | null
-          starting_day: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          name?: string | null
-          age?: number | null
-          height?: number | null
-          weight?: number | null
-          goal?: string | null
-          experience_level?: string | null
-          workouts_per_week?: number | null
-          starting_day?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          name?: string | null
-          age?: number | null
-          height?: number | null
-          weight?: number | null
-          goal?: string | null
-          experience_level?: string | null
-          workouts_per_week?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: 'profiles_user_id_fkey'
-            columns: ['user_id']
-            isOneToOne: false
-            referencedRelation: 'users'
-            referencedColumns: ['id']
-          },
-        ]
+        Relationships: []
       }
       exercises: {
         Row: {
@@ -139,13 +85,6 @@ export type Database = {
             referencedRelation: 'muscle_groups'
             referencedColumns: ['id']
           },
-          {
-            foreignKeyName: 'exercises_user_id_fkey'
-            columns: ['user_id']
-            isOneToOne: false
-            referencedRelation: 'users'
-            referencedColumns: ['id']
-          },
         ]
       }
       movement_types: {
@@ -158,6 +97,45 @@ export type Database = {
         Row: { id: number; name: string }
         Insert: { id?: number; name: string }
         Update: { id?: number; name?: string }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          age: number | null
+          experience_level: string | null
+          goal: string | null
+          height: number | null
+          id: number
+          name: string | null
+          starting_day: string | null
+          user_id: string
+          weight: number | null
+          workouts_per_week: number | null
+        }
+        Insert: {
+          age?: number | null
+          experience_level?: string | null
+          goal?: string | null
+          height?: number | null
+          id?: number
+          name?: string | null
+          starting_day?: string | null
+          user_id: string
+          weight?: number | null
+          workouts_per_week?: number | null
+        }
+        Update: {
+          age?: number | null
+          experience_level?: string | null
+          goal?: string | null
+          height?: number | null
+          id?: number
+          name?: string | null
+          starting_day?: string | null
+          user_id?: string
+          weight?: number | null
+          workouts_per_week?: number | null
+        }
         Relationships: []
       }
       program_workouts: {
@@ -214,6 +192,7 @@ export type Database = {
       programs: {
         Row: {
           created_at: string | null
+          duration_weeks: number
           end_date: string
           has_deload_week: boolean | null
           id: string
@@ -224,6 +203,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          duration_weeks?: number
           end_date: string
           has_deload_week?: boolean | null
           id?: string
@@ -234,6 +214,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          duration_weeks?: number
           end_date?: string
           has_deload_week?: boolean | null
           id?: string
@@ -242,15 +223,7 @@ export type Database = {
           updated_at?: string | null
           user_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: 'programs_user_id_fkey'
-            columns: ['user_id']
-            isOneToOne: false
-            referencedRelation: 'users'
-            referencedColumns: ['id']
-          },
-        ]
+        Relationships: []
       }
       session_sets: {
         Row: {
@@ -319,61 +292,35 @@ export type Database = {
           },
         ]
       }
-      user_tokens: {
-        Row: {
-          created_at: string | null
-          expires_at: string
-          id: string
-          refresh_token: string
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          expires_at: string
-          id: string
-          refresh_token: string
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          expires_at?: string
-          id?: string
-          refresh_token?: string
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: 'user_tokens_user_id_fkey'
-            columns: ['user_id']
-            isOneToOne: false
-            referencedRelation: 'users'
-            referencedColumns: ['id']
-          },
-        ]
-      }
       users: {
         Row: {
+          auth_id: string | null
           created_at: string | null
+          date_of_birth: string | null
           email: string
+          first_name: string | null
           id: string
-          name: string | null
-          password: string | null
+          last_name: string | null
           updated_at: string | null
         }
         Insert: {
+          auth_id?: string | null
           created_at?: string | null
+          date_of_birth?: string | null
           email: string
+          first_name?: string | null
           id?: string
-          name?: string | null
-          password?: string | null
+          last_name?: string | null
           updated_at?: string | null
         }
         Update: {
+          auth_id?: string | null
           created_at?: string | null
+          date_of_birth?: string | null
           email?: string
+          first_name?: string | null
           id?: string
-          name?: string | null
-          password?: string | null
+          last_name?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -481,13 +428,6 @@ export type Database = {
             referencedColumns: ['id']
           },
           {
-            foreignKeyName: 'workout_sessions_user_id_fkey'
-            columns: ['user_id']
-            isOneToOne: false
-            referencedRelation: 'users'
-            referencedColumns: ['id']
-          },
-          {
             foreignKeyName: 'workout_sessions_workout_id_fkey'
             columns: ['workout_id']
             isOneToOne: false
@@ -521,15 +461,7 @@ export type Database = {
           updated_at?: string | null
           user_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: 'workouts_user_id_fkey'
-            columns: ['user_id']
-            isOneToOne: false
-            referencedRelation: 'users'
-            referencedColumns: ['id']
-          },
-        ]
+        Relationships: []
       }
     }
     Views: { [_ in never]: never }

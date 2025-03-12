@@ -12,6 +12,7 @@ import {
   users,
   ProgramWorkoutInsert,
   ProfileInsert,
+  ExerciseInsert,
 } from './drizzle/schema'
 import { NotFoundError } from './errors'
 import { cache } from './cache'
@@ -56,9 +57,9 @@ const router = (app: Elysia) =>
   app
     .use(jwt({ name: 'jwt', secret: process.env.JWT_SECRET ?? '' }))
     .use(bearer())
-    .derive(async ({ cookie: { access_token, refresh_token }, request }) => {
+    .derive(async ({ cookie: { refresh_token }, request }) => {
       const supabaseClient = supabase(request)
-      const { data, error } = await supabaseClient.auth.getUser()
+      const { data } = await supabaseClient.auth.getUser()
 
       if (data.user) return { userId: data.user.id }
 
@@ -85,17 +86,23 @@ const router = (app: Elysia) =>
     )
     .group('/user', (app) =>
       app
-        .get('/', async ({ userId }) => {
-          return { userId }
+        .get('/', async ({ userId }: { userId: string }) => {
+          const supabaseClient = supabase()
+          const { data } = await supabaseClient.auth.admin.getUserById(userId)
+
+          return data
         })
-        .post('/', async ({ userId }) => {
-          return { userId }
-        })
+        .post(
+          '/',
+          async ({ userId }: { userId: string; body: ProfileInsert }) => {
+            return { userId }
+          },
+        )
         .put(
           '/',
           async ({ userId, body }: { userId: string; body: ProfileInsert }) => {
             const supabaseClient = supabase()
-            const { data, error } = await supabaseClient
+            const { data } = await supabaseClient
               .from('profiles')
               .update({
                 name: body.name,
@@ -107,7 +114,7 @@ const router = (app: Elysia) =>
                 workouts_per_week: body.workouts_per_week,
                 starting_day: body.starting_day,
               })
-              .eq('id', userId)
+              .eq('user_id', userId)
               .select()
               .single()
 
@@ -148,7 +155,13 @@ const router = (app: Elysia) =>
       app
         .get(
           '/',
-          async ({ query, cookie: { access_token }, request }) => {
+          async ({
+            query,
+            request,
+          }: {
+            query: { muscleGroupName?: string; movementTypeName?: string }
+            request: Request
+          }) => {
             const supabaseClient = supabase(request)
             const { data, error } = await supabaseClient.auth.getUser()
 
@@ -172,97 +185,122 @@ const router = (app: Elysia) =>
             ),
           },
         )
-        .get(':exerciseId', async ({ params, set }) => {
-          const { exerciseId } = params
-          const parsedExerciseId = parseInt(exerciseId)
+        .get(
+          ':exerciseId',
+          async ({ params }: { params: { exerciseId: string } }) => {
+            const { exerciseId } = params
+            const parsedExerciseId = parseInt(exerciseId)
 
-          const exercise = await getExerciseById(parsedExerciseId)
-          return exercise
-        })
-        .post('/', async ({ body, set }) => {
-          try {
-            const { name, muscle_group_name, movement_type_name } = body as {
-              name?: string
-              muscle_group_name?: string
-              movement_type_name?: string
+            const exercise = await getExerciseById(parsedExerciseId)
+            return exercise
+          },
+        )
+        .post(
+          '/',
+          async ({
+            body,
+            set,
+          }: {
+            body: ExerciseInsert
+            set: Context['set']
+          }) => {
+            try {
+              const { name, muscle_group_name, movement_type_name } = body as {
+                name?: string
+                muscle_group_name?: string
+                movement_type_name?: string
+              }
+
+              if (!name || !muscle_group_name || !movement_type_name) {
+                set.status = 400
+                return { error: 'Missing required fields' }
+              }
+
+              const muscle_group_id = cache.getMuscleGroupId(muscle_group_name)
+              if (!muscle_group_id) {
+                throw new NotFoundError(
+                  `Muscle group '${muscle_group_name}' does not exist.`,
+                )
+              }
+
+              const movement_type_id =
+                cache.getMovementTypeId(movement_type_name)
+              if (!movement_type_id) {
+                throw new NotFoundError(
+                  `Movement type '${movement_type_name}' does not exist.`,
+                )
+              }
+
+              const newExercise = await db
+                .insert(exercises)
+                .values({
+                  name,
+                  muscle_group_id: muscle_group_id,
+                  movement_type_id: movement_type_id,
+                })
+                .returning()
+                .execute()
+
+              return newExercise[0]
+            } catch (error) {
+              if (error instanceof NotFoundError) {
+                set.status = 404
+                return { error: error.message }
+              }
+              console.error('Error creating exercise:', error)
+              set.status = 500
+              return { error: 'Internal Server Error' }
             }
+          },
+        )
+        .delete(
+          ':id',
+          async ({
+            params,
+            set,
+          }: {
+            params: { id: string }
+            set: Context['set']
+          }) => {
+            try {
+              const { id } = params
+              const exerciseId = parseInt(id)
 
-            if (!name || !muscle_group_name || !movement_type_name) {
-              set.status = 400
-              return { error: 'Missing required fields' }
+              const deletedExercise = await deleteExercise(exerciseId)
+              return deletedExercise
+            } catch (error) {
+              if (error instanceof NotFoundError) {
+                set.status = 404
+                return { error: error.message }
+              }
+              console.error('Error deleting exercise:', error)
+              set.status = 500
+              return { error: 'Internal Server Error' }
             }
-
-            const muscle_group_id = cache.getMuscleGroupId(muscle_group_name)
-            if (!muscle_group_id) {
-              throw new NotFoundError(
-                `Muscle group '${muscle_group_name}' does not exist.`,
-              )
-            }
-
-            const movement_type_id = cache.getMovementTypeId(movement_type_name)
-            if (!movement_type_id) {
-              throw new NotFoundError(
-                `Movement type '${movement_type_name}' does not exist.`,
-              )
-            }
-
-            const newExercise = await db
-              .insert(exercises)
-              .values({
-                name,
-                muscleGroupId: muscle_group_id,
-                movementTypeId: movement_type_id,
-              })
-              .returning()
-              .execute()
-
-            return newExercise[0]
-          } catch (error) {
-            if (error instanceof NotFoundError) {
-              set.status = 404
-              return { error: error.message }
-            }
-            console.error('Error creating exercise:', error)
-            set.status = 500
-            return { error: 'Internal Server Error' }
-          }
-        })
-        .delete(':id', async ({ params, set }) => {
-          try {
-            const { id } = params
-            const exerciseId = parseInt(id)
-
-            const deletedExercise = await deleteExercise(exerciseId)
-            return deletedExercise
-          } catch (error) {
-            if (error instanceof NotFoundError) {
-              set.status = 404
-              return { error: error.message }
-            }
-            console.error('Error deleting exercise:', error)
-            set.status = 500
-            return { error: 'Internal Server Error' }
-          }
-        }),
+          },
+        ),
     )
 
     .group('/programs', (app) =>
       app
-        .get('/', async ({ userId, set }) => {
-          if (!userId) {
-            set.status = 401
-            return { error: 'Unauthorized' }
-          }
+        .get(
+          '/',
+          async ({ userId, set }: { userId: string; set: Context['set'] }) => {
+            if (!userId) {
+              set.status = 401
+              return { error: 'Unauthorized' }
+            }
 
-          try {
-            const allPrograms = await getPrograms(userId)
-            console.log(allPrograms)
-            return allPrograms
-          } catch (error) {
-            console.error('Error fetching programs:', error)
-            return { error: 'Internal Server Error' }
-          }
-        })
+            try {
+              const allPrograms = await getPrograms(userId)
+              console.log(allPrograms)
+              return allPrograms
+            } catch (error) {
+              console.error('Error fetching programs:', error)
+              return { error: 'Internal Server Error' }
+            }
+          },
+        )
         .post(
           '/',
           async ({
@@ -318,33 +356,45 @@ const router = (app: Elysia) =>
             }
           },
         )
-        .get('/:programId', async ({ params, set }) => {
-          const { programId } = params
-          // const program = await db
-          //   .select()
-          //   .from(programs)
-          //   .where(eq(programs.id, programId))
-          //   .execute()
-          // return program[0]
-          const program = await getProgram(programId)
-          return program
-        })
-        .post('/:programId/workouts', async ({ params, body }) => {
-          const { programId } = params
-          const programWorkouts = body as ProgramWorkoutInsert[]
+        .get(
+          '/:programId',
+          async ({ params }: { params: { programId: string } }) => {
+            const { programId } = params
+            // const program = await db
+            //   .select()
+            //   .from(programs)
+            //   .where(eq(programs.id, programId))
+            //   .execute()
+            // return program[0]
+            const program = await getProgram(programId)
+            return program
+          },
+        )
+        .post(
+          '/:programId/workouts',
+          async ({
+            params,
+            body,
+          }: {
+            params: { programId: string }
+            body: ProgramWorkoutInsert[]
+          }) => {
+            const { programId } = params
+            const programWorkouts = body as ProgramWorkoutInsert[]
 
-          const newProgramWorkouts = await createProgramWorkouts(
-            programWorkouts.map((workout) => ({
-              ...workout,
-              program_id: programId,
-            })),
-          )
-          return newProgramWorkouts
-        }),
+            const newProgramWorkouts = await createProgramWorkouts(
+              programWorkouts.map((workout) => ({
+                ...workout,
+                program_id: programId,
+              })),
+            )
+            return newProgramWorkouts
+          },
+        ),
     )
     .group('/workouts', (app) =>
       app
-        .get('/', async ({ userId, request }) => {
+        .get('/', async ({ userId }: { userId: string }) => {
           try {
             if (!userId) {
               return { error: 'Unauthorized' }
@@ -357,188 +407,238 @@ const router = (app: Elysia) =>
             return { error: 'Internal Server Error' }
           }
         })
-        .get('/details', async ({ userId }) => {
+        .get('/details', async ({ userId }: { userId: string }) => {
           if (!userId) {
             return { error: 'Unauthorized' }
           }
           const workoutsWithExercises = await fetchWorkoutsWithDetails(userId)
           return workoutsWithExercises
         })
-        .get('/:workoutId', async ({ params, set, userId }) => {
-          try {
-            const { workoutId } = params
-            if (!userId) {
-              set.status = 401
-              return { error: 'Unauthorized' }
-            }
+        .get(
+          '/:workoutId',
+          async ({
+            params,
+            set,
+            userId,
+          }: {
+            params: { workoutId: string }
+            set: Context['set']
+            userId: string
+          }) => {
+            try {
+              const { workoutId } = params
+              if (!userId) {
+                set.status = 401
+                return { error: 'Unauthorized' }
+              }
 
-            const workout = await fetchWorkoutWithWorkoutExercisesAndSets(
-              workoutId,
-              userId,
-            )
-            return workout
-          } catch (error) {
-            if (error instanceof NotFoundError) {
-              set.status = 404
-              return { error: error.message }
+              const workout = await fetchWorkoutWithWorkoutExercisesAndSets(
+                workoutId,
+                userId,
+              )
+              return workout
+            } catch (error) {
+              if (error instanceof NotFoundError) {
+                set.status = 404
+                return { error: error.message }
+              }
+              console.error('Error fetching workout:', error)
+              set.status = 500
+              return { error: 'Internal Server Error' }
             }
-            console.error('Error fetching workout:', error)
-            set.status = 500
-            return { error: 'Internal Server Error' }
-          }
-        })
-        .post('', async ({ body, set, userId, request }) => {
-          try {
-            console.log(request.headers, userId)
+          },
+        )
+        .post(
+          '',
+          async ({
+            body,
+            set,
+            userId,
+            request,
+          }: {
+            body: CreateWorkoutInput
+            set: Context['set']
+            userId: string
+            request: Request
+          }) => {
+            try {
+              console.log(request.headers, userId)
 
-            const { workout, workoutExercises, sets } = body as {
-              workout: CreateWorkoutInput
-              workoutExercises: WorkoutExerciseInsert[]
-              sets: (SessionSetInsert & { workout_exercise_index: number })[]
-            }
-            const supabaseClient = supabase(request)
-            const { data: newWorkout, error: workoutError } =
-              await supabaseClient
+              const { workout, workoutExercises, sets } = body as unknown as {
+                workout: CreateWorkoutInput
+                workoutExercises: WorkoutExerciseInsert[]
+                sets: (SessionSetInsert & { workout_exercise_index: number })[]
+              }
+              const supabaseClient = supabase(request)
+              const { data: newWorkout } = await supabaseClient
                 .from('workouts')
                 .insert({ ...workout })
                 .select()
                 .single()
 
-            if (workoutExercises.length && sets.length && newWorkout) {
-              const mappedExercises = workoutExercises.map((exercise) => ({
-                ...exercise,
-                workout_id: newWorkout.id,
-                exercise_id: exercise.exercise_id,
-              }))
+              if (workoutExercises.length && sets.length && newWorkout) {
+                const mappedExercises = workoutExercises.map((exercise) => ({
+                  ...exercise,
+                  workout_id: newWorkout.id,
+                  exercise_id: exercise.exercise_id,
+                }))
 
-              const newWorkoutExercises = await supabaseClient
-                .from('workout_exercises')
-                .insert(mappedExercises as TablesInsert<'workout_exercises'>[])
-                .select()
+                const newWorkoutExercises = await supabaseClient
+                  .from('workout_exercises')
+                  .insert(
+                    mappedExercises as TablesInsert<'workout_exercises'>[],
+                  )
+                  .select()
 
-              if (!newWorkoutExercises.data) {
-                throw new Error('Failed to create workout exercises')
+                if (!newWorkoutExercises.data) {
+                  throw new Error('Failed to create workout exercises')
+                }
+                const mappedSets = sets.map((set) => ({
+                  ...set,
+                  workout_exercise_id:
+                    newWorkoutExercises.data[set.workout_exercise_index].id,
+                }))
+
+                const newSets = await supabaseClient
+                  .from('session_sets')
+                  .insert(mappedSets as TablesInsert<'session_sets'>[])
+                  .select()
+
+                return {
+                  workout: newWorkout,
+                  workoutExercises: newWorkoutExercises.data,
+                  sets: newSets.data,
+                }
               }
-              const mappedSets = sets.map((set) => ({
-                ...set,
-                workout_exercise_id:
-                  newWorkoutExercises.data[set.workout_exercise_index].id,
-              }))
 
-              const newSets = await supabaseClient
-                .from('session_sets')
-                .insert(mappedSets as TablesInsert<'session_sets'>[])
-                .select()
+              // const newWorkout = await createWorkoutWithWorkoutExercisesAndSets({
+              //   workoutExercises,
+              //   workout,
+              //   sets,
+              //   userId,
+              // })
 
-              return {
-                workout: newWorkout,
-                workoutExercises: newWorkoutExercises.data,
-                sets: newSets.data,
-              }
+              return newWorkout
+            } catch (error) {
+              console.error('Error creating workout:', error)
+              set.status = 500
+              return { error: 'Internal Server Error' }
             }
-
-            // const newWorkout = await createWorkoutWithWorkoutExercisesAndSets({
-            //   workoutExercises,
-            //   workout,
-            //   sets,
-            //   userId,
-            // })
-
-            return newWorkout
-          } catch (error) {
-            console.error('Error creating workout:', error)
-            set.status = 500
-            return { error: 'Internal Server Error' }
-          }
-        })
+          },
+        )
 
         // Workout Exercises Routes
-        .get('/:workoutId/summary', async ({ params, set }) => {
-          try {
-            const { workoutId } = params
-            const parsedWorkoutId = parseInt(workoutId)
+        .get(
+          '/:workoutId/summary',
+          async ({
+            params,
+            set,
+          }: {
+            params: { workoutId: string }
+            set: Context['set']
+          }) => {
+            try {
+              const { workoutId } = params
+              const parsedWorkoutId = parseInt(workoutId)
 
-            const workoutSummary = await getWorkoutSummary(parsedWorkoutId)
-            return workoutSummary
-          } catch (error) {
-            console.error('Error fetching workout summary:', error)
-            set.status = 500
-            return { error: 'Internal Server Error' }
-          }
-        })
-        .get('/:workoutId/exercises', async ({ params, set }) => {
-          try {
-            const { workoutId } = params
+              const workoutSummary = await getWorkoutSummary(parsedWorkoutId)
+              return workoutSummary
+            } catch (error) {
+              console.error('Error fetching workout summary:', error)
+              set.status = 500
+              return { error: 'Internal Server Error' }
+            }
+          },
+        )
+        .get(
+          '/:workoutId/exercises',
+          async ({
+            params,
+            set,
+          }: {
+            params: { workoutId: string }
+            set: Context['set']
+          }) => {
+            try {
+              const { workoutId } = params
 
-            const workoutExercises =
-              await getWorkoutExercisesByWorkoutId(workoutId)
+              const workoutExercises =
+                await getWorkoutExercisesByWorkoutId(workoutId)
 
-            return workoutExercises
-          } catch (error) {
-            console.error('Error fetching workout exercises:', error)
-            set.status = 500
-            return { error: 'Internal Server Error' }
-          }
-        })
-        .post('/:workoutId/exercises', async ({ params, body, set }) => {
-          try {
-            const { workoutId } = params
-            const parsedWorkoutId = parseInt(workoutId)
+              return workoutExercises
+            } catch (error) {
+              console.error('Error fetching workout exercises:', error)
+              set.status = 500
+              return { error: 'Internal Server Error' }
+            }
+          },
+        )
+        .post(
+          '/:workoutId/exercises',
+          async ({
+            params,
+            body,
+            set,
+          }: {
+            params: { workoutId: string }
+            body: WorkoutExerciseInsert[]
+            set: Context['set']
+          }) => {
+            try {
+              const { workoutId } = params
+              const parsedWorkoutId = parseInt(workoutId)
 
-            const workoutExercises = body as {
-              exercise_id?: number
-              sets?: number
-              reps_min?: number
-              reps_max?: number
-              rest_timer?: number
-              target_weight?: number
-            }[]
+              const workoutExercises = body as {
+                exercise_id?: number
+                sets?: number
+                reps_min?: number
+                reps_max?: number
+                rest_timer?: number
+                target_weight?: number
+              }[]
 
-            console.log(workoutExercises)
-            const savePromises: Promise<WorkoutExerciseInsert>[] =
-              workoutExercises
-                .map(
-                  (workoutExercise): Promise<WorkoutExerciseInsert> | null => {
-                    const {
-                      exercise_id,
-                      sets,
-                      reps_min,
-                      reps_max,
-                      rest_timer,
-                      target_weight,
-                    } = workoutExercise
-                    if (
-                      !exercise_id ||
-                      !sets ||
-                      !parsedWorkoutId ||
-                      !parsedWorkoutId ||
-                      !reps_max ||
-                      !target_weight
-                    ) {
-                      return null
-                    }
+              console.log(workoutExercises)
+              const savePromises: Promise<WorkoutExerciseInsert>[] =
+                workoutExercises
+                  .map(
+                    (
+                      workoutExercise,
+                    ): Promise<WorkoutExerciseInsert> | null => {
+                      const { exercise_id, sets, reps_max, target_weight } =
+                        workoutExercise
+                      if (
+                        !exercise_id ||
+                        !sets ||
+                        !parsedWorkoutId ||
+                        !parsedWorkoutId ||
+                        !reps_max ||
+                        !target_weight
+                      ) {
+                        return null
+                      }
 
-                    return createWorkoutExercise(
-                      workoutExercise as WorkoutExerciseInsert,
-                    )
-                  },
-                )
-                .filter(
-                  (
-                    workoutExercise,
-                  ): workoutExercise is Promise<WorkoutExerciseInsert> =>
-                    workoutExercise !== null,
-                )
+                      return createWorkoutExercise(
+                        workoutExercise as WorkoutExerciseInsert,
+                      )
+                    },
+                  )
+                  .filter(
+                    (
+                      workoutExercise,
+                    ): workoutExercise is Promise<WorkoutExerciseInsert> =>
+                      workoutExercise !== null,
+                  )
 
-            const res = await Promise.all(savePromises)
-            return res
-          } catch (error) {
-            console.error('Error creating workout exercises:', error)
-            set.status = 500
-            return { error: 'Internal Server Error' }
-          }
-        })
-        .get('/generate', async ({ userId }) => {
+              const res = await Promise.all(savePromises)
+              return res
+            } catch (error) {
+              console.error('Error creating workout exercises:', error)
+              set.status = 500
+              return { error: 'Internal Server Error' }
+            }
+          },
+        )
+        .get('/generate', async () => {
           // Get OpenAI API key from environment variables
           const supabaseClient = supabase()
           const { data: user, error } = await supabaseClient.auth.getUser()
@@ -621,7 +721,13 @@ const router = (app: Elysia) =>
     // Sets Routes
     .get(
       '/workout-exercises/:workoutExerciseId/sets',
-      async ({ params, set }) => {
+      async ({
+        params,
+        set,
+      }: {
+        params: { workoutExerciseId: string }
+        set: Context['set']
+      }) => {
         try {
           const { workoutExerciseId } = params
           const parsedWorkoutExerciseId = parseInt(workoutExerciseId)
@@ -640,7 +746,20 @@ const router = (app: Elysia) =>
     )
     .post(
       '/workout-exercises/:workoutExerciseId/sets',
-      async ({ params, body, set }) => {
+      async ({
+        params,
+        body,
+        set,
+      }: {
+        params: { workoutExerciseId: string }
+        body: {
+          weight?: number
+          reps?: number
+          rpe?: number
+          completed?: boolean
+        }
+        set: Context['set']
+      }) => {
         try {
           const { workoutExerciseId } = params
 
