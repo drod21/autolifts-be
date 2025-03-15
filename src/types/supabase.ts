@@ -101,39 +101,33 @@ export type Database = {
       }
       profiles: {
         Row: {
-          age: number | null
           auth_id: string | null
           experience_level: string | null
           goal: string | null
           height: number | null
           id: number
-          name: string | null
           starting_day: string | null
           user_id: string
           weight: number | null
           workouts_per_week: number | null
         }
         Insert: {
-          age?: number | null
           auth_id?: string | null
           experience_level?: string | null
           goal?: string | null
           height?: number | null
           id?: number
-          name?: string | null
           starting_day?: string | null
           user_id: string
           weight?: number | null
           workouts_per_week?: number | null
         }
         Update: {
-          age?: number | null
           auth_id?: string | null
           experience_level?: string | null
           goal?: string | null
           height?: number | null
           id?: number
-          name?: string | null
           starting_day?: string | null
           user_id?: string
           weight?: number | null
