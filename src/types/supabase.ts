@@ -102,6 +102,7 @@ export type Database = {
       profiles: {
         Row: {
           age: number | null
+          auth_id: string | null
           experience_level: string | null
           goal: string | null
           height: number | null
@@ -114,6 +115,7 @@ export type Database = {
         }
         Insert: {
           age?: number | null
+          auth_id?: string | null
           experience_level?: string | null
           goal?: string | null
           height?: number | null
@@ -126,6 +128,7 @@ export type Database = {
         }
         Update: {
           age?: number | null
+          auth_id?: string | null
           experience_level?: string | null
           goal?: string | null
           height?: number | null
@@ -136,7 +139,15 @@ export type Database = {
           weight?: number | null
           workouts_per_week?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: 'profiles_user_id_fkey1'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'users'
+            referencedColumns: ['id']
+          },
+        ]
       }
       program_workouts: {
         Row: {
